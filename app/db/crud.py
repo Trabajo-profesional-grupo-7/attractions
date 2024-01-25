@@ -102,3 +102,13 @@ def like_attraction(db: Session, data: schemas.LikeAttraction):
         db.refresh(new_record)
 
         return new_record
+
+
+def get_liked_attractions(db: Session, data: schemas.GetLikedAttractions):
+    return (
+        db.query(models.LikedAttractions)
+        .filter(models.LikedAttractions.user_id == data.user_id)
+        .offset(data.offset)
+        .limit(data.limit)
+        .all()
+    )
