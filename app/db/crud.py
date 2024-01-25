@@ -57,7 +57,7 @@ def mark_as_done(db: Session, data: schemas.MarkAsDoneAttraction):
 
         return "Existing record deleted successfully"
     else:
-        new_record = models.SavedAttractions(
+        new_record = models.DoneAttractions(
             user_id=data.user_id, attraction_id=data.attraction_id
         )
         db.add(new_record)
@@ -75,3 +75,30 @@ def get_done_attractions(db: Session, data: schemas.GetDoneAttractions):
         .limit(data.limit)
         .all()
     )
+
+
+def like_attraction(db: Session, data: schemas.LikeAttraction):
+    existing_record = (
+        db.query(models.LikedAttractions)
+        .filter(
+            models.LikedAttractions.user_id == data.user_id,
+            models.LikedAttractions.attraction_id == data.attraction_id,
+        )
+        .first()
+    )
+
+    if existing_record:
+        db.delete(existing_record)
+        db.commit()
+        db.flush()
+
+        return "Existing record deleted successfully"
+    else:
+        new_record = models.LikedAttractions(
+            user_id=data.user_id, attraction_id=data.attraction_id
+        )
+        db.add(new_record)
+        db.commit()
+        db.refresh(new_record)
+
+        return new_record

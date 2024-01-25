@@ -22,3 +22,8 @@ class GetDoneAttractions(BaseModel):
     user_id: int
     size: int
     page: int
+
+
+class LikeAttraction(BaseModel):
+    user_id: int
+    attraction_id: int
