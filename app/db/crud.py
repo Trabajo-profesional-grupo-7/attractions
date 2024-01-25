@@ -4,10 +4,24 @@ from . import models, schemas
 
 
 def save_attraction(db: Session, data: schemas.SaveAttraction):
-    db_saved_attractions = models.SaveAttractions(
-        user_id=data.user_id, attraction_id=data.attraction_id
-    )
-    db.add(db_saved_attractions)
-    db.commit()
-    db.refresh(db_saved_attractions)
-    return db_saved_attractions
+    existing_record = db.query(models.SaveAttractions).filter(
+        models.SaveAttractions.user_id == data.user_id,
+        models.SaveAttractions.attraction_id == data.attraction_id
+    ).first()
+
+    if existing_record:
+        db.delete(existing_record)
+        db.commit()
+        db.flush()
+
+        return "Existing record deleted successfully"
+    else:
+        new_record = models.SaveAttractions(
+            user_id=data.user_id, attraction_id=data.attraction_id
+        )
+        db.add(new_record)
+        db.commit()
+        db.refresh(new_record)
+
+        return new_record
+
