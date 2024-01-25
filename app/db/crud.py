@@ -33,9 +33,9 @@ def save_attraction(db: Session, data: schemas.SaveAttraction):
 def get_saved_attractions(db: Session, data: schemas.GetSavedAttractions):
     return (
         db.query(models.SavedAttractions)
-        .filter(models.SavedAttractions.user_id == data.user_id)
-        .offset(data.offset)
-        .limit(data.limit)
+        .filter(models.SavedAttractions.user_id == data['user_id'])
+        .offset(data['page'])
+        .limit(data['size'])
         .all()
     )
 
@@ -70,9 +70,9 @@ def mark_as_done(db: Session, data: schemas.MarkAsDoneAttraction):
 def get_done_attractions(db: Session, data: schemas.GetDoneAttractions):
     return (
         db.query(models.DoneAttractions)
-        .filter(models.DoneAttractions.user_id == data.user_id)
-        .offset(data.offset)
-        .limit(data.limit)
+        .filter(models.DoneAttractions.user_id == data['user_id'])
+        .offset(data['page'])
+        .limit(data['size'])
         .all()
     )
 
@@ -107,8 +107,8 @@ def like_attraction(db: Session, data: schemas.LikeAttraction):
 def get_liked_attractions(db: Session, data: schemas.GetLikedAttractions):
     return (
         db.query(models.LikedAttractions)
-        .filter(models.LikedAttractions.user_id == data.user_id)
-        .offset(data.offset)
-        .limit(data.limit)
+        .filter(models.LikedAttractions.user_id == data['user_id'])
+        .offset(data['page'])
+        .limit(data['size'])
         .all()
     )

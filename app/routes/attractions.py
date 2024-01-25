@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 
 from app.db import crud, schemas
 from app.db.database import SessionLocal, get_db
@@ -10,8 +10,12 @@ router = APIRouter()
 
 @router.get("/attractions/save-list", status_code=201, tags=["Attractions"])
 def get_saved_attractions(
-    data: schemas.GetSavedAttractions, db: SessionLocal = Depends(get_db)
+    user_id: int = Query(..., description="User ID"),
+    page: int = Query(1, description="Page number", ge=0),
+    size: int = Query(10, description="Number of items per page", ge=1, le=100),
+    db: SessionLocal = Depends(get_db),
 ):
+    data = {"user_id": user_id, "page": page, "size": size}
     return crud.get_saved_attractions(db=db, data=data)
 
 
@@ -22,8 +26,12 @@ def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get
 
 @router.get("/attractions/like-list", status_code=201, tags=["Attractions"])
 def get_liked_attractions(
-    data: schemas.GetLikedAttractions, db: SessionLocal = Depends(get_db)
+    user_id: int = Query(..., description="User ID"),
+    page: int = Query(1, description="Page number", ge=0),
+    size: int = Query(10, description="Number of items per page", ge=1, le=100),
+    db: SessionLocal = Depends(get_db),
 ):
+    data = {"user_id": user_id, "page": page, "size": size}
     return crud.get_liked_attractions(db=db, data=data)
 
 
@@ -34,8 +42,12 @@ def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get
 
 @router.get("/attractions/done-list", status_code=201, tags=["Attractions"])
 def get_done_attractions(
-    data: schemas.GetDoneAttractions, db: SessionLocal = Depends(get_db)
+    user_id: int = Query(..., description="User ID"),
+    page: int = Query(1, description="Page number", ge=0),
+    size: int = Query(10, description="Number of items per page", ge=1, le=100),
+    db: SessionLocal = Depends(get_db),
 ):
+    data = {"user_id": user_id, "page": page, "size": size}
     return crud.get_done_attractions(db=db, data=data)
 
 
