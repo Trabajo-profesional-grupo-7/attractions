@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
-class SaveAttractions(Base):
+class SavedAttractions(Base):
     __tablename__ = "saved_attractions"
 
     user_id = Column(Integer, primary_key=True)

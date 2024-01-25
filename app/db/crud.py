@@ -4,9 +4,9 @@ from . import models, schemas
 
 
 def save_attraction(db: Session, data: schemas.SaveAttraction):
-    existing_record = db.query(models.SaveAttractions).filter(
-        models.SaveAttractions.user_id == data.user_id,
-        models.SaveAttractions.attraction_id == data.attraction_id
+    existing_record = db.query(models.SavedAttractions).filter(
+        models.SavedAttractions.user_id == data.user_id,
+        models.SavedAttractions.attraction_id == data.attraction_id
     ).first()
 
     if existing_record:
@@ -16,7 +16,7 @@ def save_attraction(db: Session, data: schemas.SaveAttraction):
 
         return "Existing record deleted successfully"
     else:
-        new_record = models.SaveAttractions(
+        new_record = models.SavedAttractions(
             user_id=data.user_id, attraction_id=data.attraction_id
         )
         db.add(new_record)
@@ -25,3 +25,8 @@ def save_attraction(db: Session, data: schemas.SaveAttraction):
 
         return new_record
 
+
+def get_saved_attractions(db: Session, data: schemas.GetSavedAttractions):
+    return db.query(models.SavedAttractions).filter(
+        models.SavedAttractions.user_id == data.user_id
+    ).offset(data.offset).limit(data.limit).all()
