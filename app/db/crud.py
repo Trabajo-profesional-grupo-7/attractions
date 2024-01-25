@@ -65,3 +65,13 @@ def mark_as_done(db: Session, data: schemas.MarkAsDoneAttraction):
         db.refresh(new_record)
 
         return new_record
+
+
+def get_done_attractions(db: Session, data: schemas.GetDoneAttractions):
+    return (
+        db.query(models.DoneAttractions)
+        .filter(models.DoneAttractions.user_id == data.user_id)
+        .offset(data.offset)
+        .limit(data.limit)
+        .all()
+    )
