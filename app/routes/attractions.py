@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("/attractions/save-list", status_code=201, tags=["Attractions"])
 def get_saved_attractions(
     user_id: int = Query(..., description="User ID"),
-    page: int = Query(1, description="Page number", ge=0),
+    page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
@@ -27,7 +27,7 @@ def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get
 @router.get("/attractions/like-list", status_code=201, tags=["Attractions"])
 def get_liked_attractions(
     user_id: int = Query(..., description="User ID"),
-    page: int = Query(1, description="Page number", ge=0),
+    page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
@@ -43,7 +43,7 @@ def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get
 @router.get("/attractions/done-list", status_code=201, tags=["Attractions"])
 def get_done_attractions(
     user_id: int = Query(..., description="User ID"),
-    page: int = Query(1, description="Page number", ge=0),
+    page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
@@ -56,3 +56,8 @@ def mark_as_done(
     data: schemas.MarkAsDoneAttraction, db: SessionLocal = Depends(get_db)
 ):
     return crud.mark_as_done(db=db, data=data)
+
+
+@router.post("/attractions/rate", status_code=201, tags=["Attractions"])
+def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get_db)):
+    return crud.rate_attraction(db=db, data=data)

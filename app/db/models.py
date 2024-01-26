@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
+import datetime
 
 from .database import Base
 
@@ -9,7 +9,7 @@ class SavedAttractions(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(Integer, primary_key=True)
-    saved_at = Column(DateTime)
+    saved_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class DoneAttractions(Base):
@@ -17,16 +17,16 @@ class DoneAttractions(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(Integer, primary_key=True)
-    done_at = Column(DateTime)
+    done_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class RateAttraction(Base):
+class AttractionRatings(Base):
     __tablename__ = "attraction_ratings"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(Integer, primary_key=True)
     rating = Column(Integer)
-    rated_at = Column(DateTime)
+    rated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class CommentAttraction(Base):
@@ -36,7 +36,7 @@ class CommentAttraction(Base):
     user_id = Column(Integer)
     attraction_id = Column(Integer)
     comment = Column(String)
-    created_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class LikedAttractions(Base):
@@ -44,4 +44,4 @@ class LikedAttractions(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(Integer, primary_key=True)
-    liked_at = Column(DateTime)
+    liked_at = Column(DateTime, default=datetime.datetime.utcnow)

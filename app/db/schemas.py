@@ -33,3 +33,9 @@ class GetLikedAttractions(BaseModel):
     user_id: int
     size: int
     page: int
+
+
+class RateAttraction(BaseModel):
+    user_id: int
+    attraction_id: int
+    rating: int
