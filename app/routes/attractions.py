@@ -8,20 +8,57 @@ from app.services.logger import Logger
 router = APIRouter()
 
 
-@router.get("/attractions/save-list", status_code=201, tags=["Attractions"])
-def get_saved_attractions(
+@router.post(
+    "/attractions/save",
+    status_code=201,
+    tags=["Attractions"],
+    description="Saves an attraction for a user",
+)
+def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
+    if crud.get_saved_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    ):
+        Logger().info("Attraction already saved by user")
+        raise HTTPException(
+            status_code=404,
+            detail={"status": "error", "message": "Attraction already saved by user"},
+        )
+    return crud.save_attraction(db=db, data=data)
+
+
+@router.delete(
+    "/attractions/unsave",
+    status_code=204,
+    tags=["Attractions"],
+    description="Unsaves an attraction for a user",
+)
+def unsave_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
+    saved_attraction = crud.get_saved_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
+    if not saved_attraction:
+        Logger().info("Attraction has not been saved by user")
+        raise HTTPException(
+            status_code=404,
+            detail={"status": "error", "message": "Attraction has not been saved by user"},
+        )
+    crud.delete_record(db=db, record=saved_attraction)
+
+
+@router.get(
+    "/attractions/save-list",
+    status_code=200,
+    tags=["Attractions"],
+    description="Returns a list of the saved attractions of an user",
+)
+def get_saved_attractions_list(
     user_id: int = Query(..., description="User ID"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
-    data = {"user_id": user_id, "page": page, "size": size}
-    return crud.get_saved_attractions(db=db, data=data)
-
-
-@router.post("/attractions/save", status_code=201, tags=["Attractions"])
-def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
-    return crud.save_attraction(db=db, data=data)
+    data = schemas.GetSavedAttractions(user_id=user_id, page=page, size=size)
+    return crud.get_saved_attractions_list(db=db, data=data)
 
 
 @router.get("/attractions/like-list", status_code=201, tags=["Attractions"])
@@ -98,4 +135,4 @@ def delete_comment(
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
-    crud.delete_comment(db=db, comment=comment)
+    crud.delete_record(db=db, record=comment)

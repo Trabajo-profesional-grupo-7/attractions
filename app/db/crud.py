@@ -3,39 +3,34 @@ from . import models, schemas
 from sqlalchemy import func
 
 
-def save_attraction(db: Session, data: schemas.SaveAttraction):
-    existing_record = (
+def get_saved_attraction(db: Session, user_id: int, attraction_id: int):
+    return (
         db.query(models.SavedAttractions)
         .filter(
-            models.SavedAttractions.user_id == data.user_id,
-            models.SavedAttractions.attraction_id == data.attraction_id,
+            models.SavedAttractions.user_id == user_id,
+            models.SavedAttractions.attraction_id == attraction_id,
         )
         .first()
     )
 
-    if existing_record:
-        db.delete(existing_record)
-        db.commit()
-        db.flush()
 
-        return "Existing record deleted successfully"
-    else:
-        new_record = models.SavedAttractions(
-            user_id=data.user_id, attraction_id=data.attraction_id
-        )
-        db.add(new_record)
-        db.commit()
-        db.refresh(new_record)
+def save_attraction(db: Session, data: schemas.SaveAttraction):
+    new_record = models.SavedAttractions(
+        user_id=data.user_id, attraction_id=data.attraction_id
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
 
-        return new_record
+    return new_record
 
 
-def get_saved_attractions(db: Session, data: schemas.GetSavedAttractions):
+def get_saved_attractions_list(db: Session, data: schemas.GetSavedAttractions):
     return (
         db.query(models.SavedAttractions)
-        .filter(models.SavedAttractions.user_id == data["user_id"])
-        .offset(data["page"])
-        .limit(data["size"])
+        .filter(models.SavedAttractions.user_id == data.user_id)
+        .offset(data.page)
+        .limit(data.size)
         .all()
     )
 
@@ -172,7 +167,7 @@ def get_comment_by_id(db: Session, comment_id: int):
     )
 
 
-def delete_comment(db: Session, comment):
-    db.delete(comment)
+def delete_record(db: Session, record):
+    db.delete(record)
     db.commit()
     db.flush()
