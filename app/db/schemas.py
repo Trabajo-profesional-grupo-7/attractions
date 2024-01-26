@@ -39,3 +39,7 @@ class RateAttraction(BaseModel):
     user_id: int
     attraction_id: int
     rating: int
+
+
+class GetAvgAttractionRating(BaseModel):
+    attraction_id: int

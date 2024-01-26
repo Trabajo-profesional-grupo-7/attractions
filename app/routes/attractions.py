@@ -61,3 +61,12 @@ def mark_as_done(
 @router.post("/attractions/rate", status_code=201, tags=["Attractions"])
 def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get_db)):
     return crud.rate_attraction(db=db, data=data)
+
+
+@router.get("/attractions/avg-attraction-rating", status_code=201, tags=["Attractions"])
+def get_avg_attraction_rating(
+    attraction_id: int = Query(..., description="Attraction ID"),
+    db: SessionLocal = Depends(get_db),
+):
+    data = schemas.GetAvgAttractionRating(attraction_id=attraction_id)
+    return crud.get_avg_attraction_rating(db=db, data=data)

@@ -1,6 +1,6 @@
-import hashlib
 from sqlalchemy.orm import Session
 from . import models, schemas
+from sqlalchemy import func
 
 
 def save_attraction(db: Session, data: schemas.SaveAttraction):
@@ -123,3 +123,16 @@ def rate_attraction(db: Session, data: schemas.RateAttraction):
     db.refresh(new_record)
 
     return new_record
+
+
+def get_avg_attraction_rating(db: Session, data: schemas.GetAvgAttractionRating):
+    result = (
+        db.query(func.avg(models.AttractionRatings.rating).label("average_rating"))
+        .filter(models.AttractionRatings.attraction_id == data.attraction_id)
+        .group_by(models.AttractionRatings.attraction_id)
+        .first()
+    )
+
+    average_rating = float(result[0]) if result else None
+
+    return {"average_rating": average_rating}
