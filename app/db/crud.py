@@ -89,34 +89,29 @@ def get_likes(db: Session, data: schemas.GetLikes):
 # DONE
 
 
-def mark_as_done(db: Session, data: schemas.MarkAsDoneAttraction):
-    existing_record = (
+def get_done_attraction(db: Session, user_id: int, attraction_id: int):
+    return (
         db.query(models.DoneAttractions)
         .filter(
-            models.DoneAttractions.user_id == data.user_id,
-            models.DoneAttractions.attraction_id == data.attraction_id,
+            models.DoneAttractions.user_id == user_id,
+            models.DoneAttractions.attraction_id == attraction_id,
         )
         .first()
     )
 
-    if existing_record:
-        db.delete(existing_record)
-        db.commit()
-        db.flush()
 
-        return "Existing record deleted successfully"
-    else:
-        new_record = models.DoneAttractions(
-            user_id=data.user_id, attraction_id=data.attraction_id
-        )
-        db.add(new_record)
-        db.commit()
-        db.refresh(new_record)
+def mark_as_done_attraction(db: Session, data: schemas.MarkAsDoneAttraction):
+    new_record = models.DoneAttractions(
+        user_id=data.user_id, attraction_id=data.attraction_id
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
 
-        return new_record
+    return new_record
 
 
-def get_done_attractions(db: Session, data: schemas.GetDoneAttractions):
+def get_done_attractions_list(db: Session, data: schemas.GetDoneAttractions):
     return (
         db.query(models.DoneAttractions)
         .filter(models.DoneAttractions.user_id == data["user_id"])
@@ -124,6 +119,9 @@ def get_done_attractions(db: Session, data: schemas.GetDoneAttractions):
         .limit(data["size"])
         .all()
     )
+
+
+# RATE
 
 
 def rate_attraction(db: Session, data: schemas.RateAttraction):
