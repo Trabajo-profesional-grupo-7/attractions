@@ -195,28 +195,37 @@ def get_done_attractions_list(
 # RATE
 
 
-@router.post("/attractions/rate", status_code=201, tags=["Attractions"])
+@router.post(
+    "/attractions/rate",
+    status_code=201,
+    tags=["Attractions"],
+    description="Rates an attraction by an user",
+)
 def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get_db)):
     return crud.rate_attraction(db=db, data=data)
 
 
-@router.get("/attractions/avg-attraction-rating", status_code=201, tags=["Attractions"])
-def get_avg_attraction_rating(
-    attraction_id: int = Query(..., description="Attraction ID"),
-    db: SessionLocal = Depends(get_db),
-):
-    data = schemas.GetAvgAttractionRating(attraction_id=attraction_id)
-    return crud.get_avg_attraction_rating(db=db, data=data)
+# COMMENT
 
 
-@router.post("/attractions/comment", status_code=201, tags=["Attractions"])
+@router.post(
+    "/attractions/comment",
+    status_code=201,
+    tags=["Attractions"],
+    description="Comments an attraction for an user",
+)
 def comment_attraction(
     data: schemas.CommentAttraction, db: SessionLocal = Depends(get_db)
 ):
-    return crud.comment_attraction(db=db, data=data)
+    return crud.add_comment(db=db, data=data)
 
 
-@router.delete("/attractions/comment", status_code=204, tags=["Attractions"])
+@router.delete(
+    "/attractions/comment",
+    status_code=204,
+    tags=["Attractions"],
+    description="Deletes a comment by comment_id",
+)
 def delete_comment(
     data: schemas.DeleteCommentAttraction, db: SessionLocal = Depends(get_db)
 ):
@@ -227,3 +236,22 @@ def delete_comment(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
     crud.delete_record(db=db, record=comment)
+
+
+@router.put(
+    "/attractions/comment",
+    status_code=201,
+    tags=["Attractions"],
+    description="Edits a comment by comment_id",
+)
+def update_comment(
+    data: schemas.UpdateComment,
+    db: SessionLocal = Depends(get_db),
+):
+    comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
+    if not comment:
+        Logger().info("Comment not found")
+        raise HTTPException(
+            status_code=404, detail={"status": "error", "message": "Comment not found"}
+        )
+    return crud.update_comment(db=db, comment_to_edit=comment, updated_comment=data.new_comment)

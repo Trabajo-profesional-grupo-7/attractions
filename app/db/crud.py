@@ -148,7 +148,10 @@ def get_avg_attraction_rating(db: Session, data: schemas.GetAvgAttractionRating)
     return {"average_rating": average_rating}
 
 
-def comment_attraction(db: Session, data: schemas.CommentAttraction):
+# COMMENT
+
+
+def add_comment(db: Session, data: schemas.CommentAttraction):
     new_record = models.AttractionComments(
         user_id=data.user_id, attraction_id=data.attraction_id, comment=data.comment
     )
@@ -167,6 +170,18 @@ def get_comment_by_id(db: Session, comment_id: int):
         )
         .first()
     )
+
+
+def update_comment(db: Session, comment_to_edit: schemas.Comment, updated_comment: str):
+    comment_to_edit.comment = updated_comment
+
+    db.commit()
+    db.refresh(comment_to_edit)
+
+    return comment_to_edit
+
+
+# GENERIC METHODS
 
 
 def delete_record(db: Session, record):

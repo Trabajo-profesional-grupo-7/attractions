@@ -57,3 +57,15 @@ class CommentAttraction(BaseModel):
 
 class DeleteCommentAttraction(BaseModel):
     comment_id: int
+
+
+class UpdateComment(BaseModel):
+    comment_id: int
+    new_comment: str
+
+
+class Comment(BaseModel):
+    comment_id: int
+    user_id: int
+    attraction_id: int
+    comment: str
