@@ -49,7 +49,6 @@ def get_likes(
     return crud.get_likes(db=db, data=data)
 
 
-
 @router.get("/attractions/done-list", status_code=201, tags=["Attractions"])
 def get_done_attractions(
     user_id: int = Query(..., description="User ID"),
@@ -80,3 +79,10 @@ def get_avg_attraction_rating(
 ):
     data = schemas.GetAvgAttractionRating(attraction_id=attraction_id)
     return crud.get_avg_attraction_rating(db=db, data=data)
+
+
+@router.post("/attractions/comment", status_code=201, tags=["Attractions"])
+def comment_attraction(
+    data: schemas.CommentAttraction, db: SessionLocal = Depends(get_db)
+):
+    return crud.comment_attraction(db=db, data=data)

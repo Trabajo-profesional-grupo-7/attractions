@@ -113,6 +113,7 @@ def get_liked_attractions(db: Session, data: schemas.GetLikedAttractions):
         .all()
     )
 
+
 def get_likes(db: Session, data: schemas.GetLikes):
     result = (
         db.query(func.count(models.AttractionLikes.attraction_id).label("likes"))
@@ -148,3 +149,14 @@ def get_avg_attraction_rating(db: Session, data: schemas.GetAvgAttractionRating)
     average_rating = float(result[0]) if result else None
 
     return {"average_rating": average_rating}
+
+
+def comment_attraction(db: Session, data: schemas.CommentAttraction):
+    new_record = models.AttractionComments(
+        user_id=data.user_id, attraction_id=data.attraction_id, comment=data.comment
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+
+    return new_record

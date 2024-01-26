@@ -29,10 +29,10 @@ class AttractionRatings(Base):
     rated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class CommentAttraction(Base):
+class AttractionComments(Base):
     __tablename__ = "attraction_comments"
 
-    comment_id = Column(Integer, primary_key=True)
+    comment_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(Integer)
     comment = Column(String)
