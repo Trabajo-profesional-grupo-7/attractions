@@ -39,7 +39,7 @@ class CommentAttraction(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class LikedAttractions(Base):
+class AttractionLikes(Base):
     __tablename__ = "attraction_likes"
 
     user_id = Column(Integer, primary_key=True)

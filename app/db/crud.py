@@ -79,10 +79,10 @@ def get_done_attractions(db: Session, data: schemas.GetDoneAttractions):
 
 def like_attraction(db: Session, data: schemas.LikeAttraction):
     existing_record = (
-        db.query(models.LikedAttractions)
+        db.query(models.AttractionLikes)
         .filter(
-            models.LikedAttractions.user_id == data.user_id,
-            models.LikedAttractions.attraction_id == data.attraction_id,
+            models.AttractionLikes.user_id == data.user_id,
+            models.AttractionLikes.attraction_id == data.attraction_id,
         )
         .first()
     )
@@ -94,7 +94,7 @@ def like_attraction(db: Session, data: schemas.LikeAttraction):
 
         return "Existing record deleted successfully"
     else:
-        new_record = models.LikedAttractions(
+        new_record = models.AttractionLikes(
             user_id=data.user_id, attraction_id=data.attraction_id
         )
         db.add(new_record)
@@ -106,12 +106,24 @@ def like_attraction(db: Session, data: schemas.LikeAttraction):
 
 def get_liked_attractions(db: Session, data: schemas.GetLikedAttractions):
     return (
-        db.query(models.LikedAttractions)
-        .filter(models.LikedAttractions.user_id == data["user_id"])
+        db.query(models.AttractionLikes)
+        .filter(models.AttractionLikes.user_id == data["user_id"])
         .offset(data["page"])
         .limit(data["size"])
         .all()
     )
+
+def get_likes(db: Session, data: schemas.GetLikes):
+    result = (
+        db.query(func.count(models.AttractionLikes.attraction_id).label("likes"))
+        .filter(models.AttractionLikes.attraction_id == data.attraction_id)
+        .group_by(models.AttractionLikes.attraction_id)
+        .first()
+    )
+
+    likes = float(result[0]) if result else None
+
+    return {"likes": likes}
 
 
 def rate_attraction(db: Session, data: schemas.RateAttraction):

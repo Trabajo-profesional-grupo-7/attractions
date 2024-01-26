@@ -40,6 +40,16 @@ def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get
     return crud.like_attraction(db=db, data=data)
 
 
+@router.get("/attractions/likes", status_code=201, tags=["Attractions"])
+def get_likes(
+    attraction_id: int = Query(..., description="Attraction ID"),
+    db: SessionLocal = Depends(get_db),
+):
+    data = schemas.GetLikes(attraction_id=attraction_id)
+    return crud.get_likes(db=db, data=data)
+
+
+
 @router.get("/attractions/done-list", status_code=201, tags=["Attractions"])
 def get_done_attractions(
     user_id: int = Query(..., description="User ID"),
