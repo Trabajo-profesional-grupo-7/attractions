@@ -7,6 +7,8 @@ from app.services.logger import Logger
 
 router = APIRouter()
 
+# SAVE
+
 
 @router.post(
     "/attractions/save",
@@ -40,7 +42,10 @@ def unsave_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(g
         Logger().info("Attraction has not been saved by user")
         raise HTTPException(
             status_code=404,
-            detail={"status": "error", "message": "Attraction has not been saved by user"},
+            detail={
+                "status": "error",
+                "message": "Attraction has not been saved by user",
+            },
         )
     crud.delete_record(db=db, record=saved_attraction)
 
@@ -61,29 +66,61 @@ def get_saved_attractions_list(
     return crud.get_saved_attractions_list(db=db, data=data)
 
 
-@router.get("/attractions/like-list", status_code=201, tags=["Attractions"])
-def get_liked_attractions(
+# LIKE
+
+
+@router.post(
+    "/attractions/like",
+    status_code=201,
+    tags=["Attractions"],
+    description="Likes an attraction for a user",
+)
+def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
+    if crud.get_liked_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    ):
+        Logger().info("Attraction already liked by user")
+        raise HTTPException(
+            status_code=404,
+            detail={"status": "error", "message": "Attraction already liked by user"},
+        )
+    return crud.like_attraction(db=db, data=data)
+
+
+@router.delete(
+    "/attractions/unlike",
+    status_code=204,
+    tags=["Attractions"],
+    description="Unlikes an attraction for a user",
+)
+def unlike_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
+    liked_attraction = crud.get_liked_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
+    if not liked_attraction:
+        Logger().info("Attraction has not been liked by user")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Attraction has not been liked by user",
+            },
+        )
+    crud.delete_record(db=db, record=liked_attraction)
+
+
+@router.get("/attractions/like-list", status_code=200, tags=["Attractions"])
+def get_liked_attractions_list(
     user_id: int = Query(..., description="User ID"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
-    data = {"user_id": user_id, "page": page, "size": size}
-    return crud.get_liked_attractions(db=db, data=data)
+    data = schemas.GetLikedAttractions(user_id=user_id, page=page, size=size)
+    return crud.get_liked_attractions_list(db=db, data=data)
 
 
-@router.post("/attractions/like", status_code=201, tags=["Attractions"])
-def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
-    return crud.like_attraction(db=db, data=data)
-
-
-@router.get("/attractions/likes", status_code=201, tags=["Attractions"])
-def get_likes(
-    attraction_id: int = Query(..., description="Attraction ID"),
-    db: SessionLocal = Depends(get_db),
-):
-    data = schemas.GetLikes(attraction_id=attraction_id)
-    return crud.get_likes(db=db, data=data)
+# DONE
 
 
 @router.get("/attractions/done-list", status_code=201, tags=["Attractions"])
