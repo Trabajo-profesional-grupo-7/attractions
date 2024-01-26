@@ -160,3 +160,19 @@ def comment_attraction(db: Session, data: schemas.CommentAttraction):
     db.refresh(new_record)
 
     return new_record
+
+
+def get_comment_by_id(db: Session, comment_id: int):
+    return (
+        db.query(models.AttractionComments)
+        .filter(
+            models.AttractionComments.comment_id == comment_id,
+        )
+        .first()
+    )
+
+
+def delete_comment(db: Session, comment):
+    db.delete(comment)
+    db.commit()
+    db.flush()

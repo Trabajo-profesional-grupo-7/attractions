@@ -86,3 +86,16 @@ def comment_attraction(
     data: schemas.CommentAttraction, db: SessionLocal = Depends(get_db)
 ):
     return crud.comment_attraction(db=db, data=data)
+
+
+@router.delete("/attractions/comment", status_code=204, tags=["Attractions"])
+def delete_comment(
+    data: schemas.DeleteCommentAttraction, db: SessionLocal = Depends(get_db)
+):
+    comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
+    if not comment:
+        Logger().info("Comment not found")
+        raise HTTPException(
+            status_code=404, detail={"status": "error", "message": "Comment not found"}
+        )
+    crud.delete_comment(db=db, comment=comment)

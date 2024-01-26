@@ -53,3 +53,7 @@ class CommentAttraction(BaseModel):
     user_id: int
     attraction_id: int
     comment: str
+
+
+class DeleteCommentAttraction(BaseModel):
+    comment_id: int
