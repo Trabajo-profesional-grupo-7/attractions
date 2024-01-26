@@ -45,3 +45,14 @@ class AttractionLikes(Base):
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(Integer, primary_key=True)
     liked_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class Attractions(Base):
+    __tablename__ = "attractions"
+
+    attraction_id = Column(Integer, primary_key=True)
+    likes_count = Column(Integer, default=0)
+    saved_count = Column(Integer, default=0)
+    done_count = Column(Integer, default=0)
+    rating_count = Column(Integer, default=0)
+    rating_total = Column(Integer, default=0)

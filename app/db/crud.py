@@ -25,7 +25,41 @@ def save_attraction(db: Session, data: schemas.SaveAttraction):
     db.commit()
     db.refresh(new_record)
 
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == data.attraction_id)
+        .first()
+    )
+
+    if not attraction:
+        attraction = models.Attractions(attraction_id=data.attraction_id)
+        db.add(attraction)
+        db.commit()
+        db.refresh(attraction)
+
+    attraction.saved_count += 1
+
+    db.commit()
+    db.refresh(attraction)
+
     return new_record
+
+
+def unsave_attraction(db: Session, attraction_to_unsave: models.SavedAttractions):
+    db.delete(attraction_to_unsave)
+    db.commit()
+    db.flush()
+
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == attraction_to_unsave.attraction_id)
+        .first()
+    )
+
+    attraction.saved_count -= 1
+
+    db.commit()
+    db.refresh(attraction)
 
 
 def get_saved_attractions_list(db: Session, data: schemas.GetSavedAttractions):
@@ -60,7 +94,41 @@ def like_attraction(db: Session, data: schemas.LikeAttraction):
     db.commit()
     db.refresh(new_record)
 
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == data.attraction_id)
+        .first()
+    )
+
+    if not attraction:
+        attraction = models.Attractions(attraction_id=data.attraction_id)
+        db.add(attraction)
+        db.commit()
+        db.refresh(attraction)
+
+    attraction.likes_count += 1
+
+    db.commit()
+    db.refresh(attraction)
+
     return new_record
+
+
+def unlike_attraction(db: Session, attraction_to_unlike: models.AttractionLikes):
+    db.delete(attraction_to_unlike)
+    db.commit()
+    db.flush()
+
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == attraction_to_unlike.attraction_id)
+        .first()
+    )
+
+    attraction.likes_count -= 1
+
+    db.commit()
+    db.refresh(attraction)
 
 
 def get_liked_attractions_list(db: Session, data: schemas.GetLikedAttractions):
@@ -71,19 +139,6 @@ def get_liked_attractions_list(db: Session, data: schemas.GetLikedAttractions):
         .limit(data.size)
         .all()
     )
-
-
-def get_likes(db: Session, data: schemas.GetLikes):
-    result = (
-        db.query(func.count(models.AttractionLikes.attraction_id).label("likes"))
-        .filter(models.AttractionLikes.attraction_id == data.attraction_id)
-        .group_by(models.AttractionLikes.attraction_id)
-        .first()
-    )
-
-    likes = float(result[0]) if result else None
-
-    return {"likes": likes}
 
 
 # DONE
@@ -108,7 +163,46 @@ def mark_as_done_attraction(db: Session, data: schemas.MarkAsDoneAttraction):
     db.commit()
     db.refresh(new_record)
 
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == data.attraction_id)
+        .first()
+    )
+
+    if not attraction:
+        attraction = models.Attractions(attraction_id=data.attraction_id)
+        db.add(attraction)
+        db.commit()
+        db.refresh(attraction)
+
+    attraction.done_count += 1
+
+    db.commit()
+    db.refresh(attraction)
+
     return new_record
+
+
+def mark_as_undone_attraction(
+    db: Session, attraction_to_mark_as_undone: models.DoneAttractions
+):
+    db.delete(attraction_to_mark_as_undone)
+    db.commit()
+    db.flush()
+
+    attraction = (
+        db.query(models.Attractions)
+        .filter(
+            models.Attractions.attraction_id
+            == attraction_to_mark_as_undone.attraction_id
+        )
+        .first()
+    )
+
+    attraction.done_count -= 1
+
+    db.commit()
+    db.refresh(attraction)
 
 
 def get_done_attractions_list(db: Session, data: schemas.GetDoneAttractions):
@@ -132,20 +226,25 @@ def rate_attraction(db: Session, data: schemas.RateAttraction):
     db.commit()
     db.refresh(new_record)
 
-    return new_record
-
-
-def get_avg_attraction_rating(db: Session, data: schemas.GetAvgAttractionRating):
-    result = (
-        db.query(func.avg(models.AttractionRatings.rating).label("average_rating"))
-        .filter(models.AttractionRatings.attraction_id == data.attraction_id)
-        .group_by(models.AttractionRatings.attraction_id)
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == data.attraction_id)
         .first()
     )
 
-    average_rating = float(result[0]) if result else None
+    if not attraction:
+        attraction = models.Attractions(attraction_id=data.attraction_id)
+        db.add(attraction)
+        db.commit()
+        db.refresh(attraction)
 
-    return {"average_rating": average_rating}
+    attraction.rating_count += 1
+    attraction.rating_total += float(data.rating)
+
+    db.commit()
+    db.refresh(attraction)
+
+    return new_record
 
 
 # COMMENT
@@ -179,12 +278,3 @@ def update_comment(db: Session, comment_to_edit: schemas.Comment, updated_commen
     db.refresh(comment_to_edit)
 
     return comment_to_edit
-
-
-# GENERIC METHODS
-
-
-def delete_record(db: Session, record):
-    db.delete(record)
-    db.commit()
-    db.flush()

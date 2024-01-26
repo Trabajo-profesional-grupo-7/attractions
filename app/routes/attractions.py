@@ -48,7 +48,7 @@ def unsave_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(g
                 "message": "Attraction has not been saved by user",
             },
         )
-    crud.delete_record(db=db, record=saved_attraction)
+    crud.unsave_attraction(db=db, attraction_to_unsave=saved_attraction)
 
 
 @router.get(
@@ -107,7 +107,7 @@ def unlike_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(g
                 "message": "Attraction has not been liked by user",
             },
         )
-    crud.delete_record(db=db, record=liked_attraction)
+    crud.unlike_attraction(db=db, attraction_to_unlike=liked_attraction)
 
 
 @router.get(
@@ -173,7 +173,7 @@ def mark_as_undone_attraction(
                 "message": "Attraction has not been marked as done by user",
             },
         )
-    crud.delete_record(db=db, record=done_attraction)
+    crud.mark_as_undone_attraction(db=db, attraction_to_mark_as_undone=done_attraction)
 
 
 @router.get(
@@ -254,4 +254,6 @@ def update_comment(
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
-    return crud.update_comment(db=db, comment_to_edit=comment, updated_comment=data.new_comment)
+    return crud.update_comment(
+        db=db, comment_to_edit=comment, updated_comment=data.new_comment
+    )
