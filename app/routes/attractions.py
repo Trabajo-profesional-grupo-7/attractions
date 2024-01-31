@@ -13,6 +13,39 @@ router = APIRouter()
 # GET ATTRACTIONS
 
 
+@router.get(
+    "/attractions/{attraction_id}",
+    status_code=201,
+    tags=["Get Attractions"],
+    description="Gets an attraction given its ID",
+)
+def get_attraction(
+    attraction_id: str = Path(
+        ..., title="Attraction ID", description="The ID of the attraction to get"
+    ),
+):
+    url = f"https://places.googleapis.com/v1/places/{attraction_id}"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
+        "X-Goog-FieldMask": "id,displayName",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": f"External API error: {response.status_code}",
+            },
+        )
+
+    return response.json()
+
+
 @router.post(
     "/attractions/nearby/{latitude}/{longitude}/{radius}",
     status_code=201,
