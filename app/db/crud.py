@@ -3,10 +3,23 @@ from . import models, schemas
 from sqlalchemy import func
 
 
+# GET
+
+
+def get_attraction(db: Session, attraction_id: str):
+    return (
+        db.query(models.Attractions)
+        .filter(
+            models.Attractions.attraction_id == attraction_id,
+        )
+        .first()
+    )
+
+
 # SAVE
 
 
-def get_saved_attraction(db: Session, user_id: int, attraction_id: int):
+def get_saved_attraction(db: Session, user_id: int, attraction_id: str):
     return (
         db.query(models.Saved)
         .filter(
@@ -18,9 +31,7 @@ def get_saved_attraction(db: Session, user_id: int, attraction_id: int):
 
 
 def save_attraction(db: Session, data: schemas.SaveAttraction):
-    new_record = models.Saved(
-        user_id=data.user_id, attraction_id=data.attraction_id
-    )
+    new_record = models.Saved(user_id=data.user_id, attraction_id=data.attraction_id)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -75,7 +86,7 @@ def get_saved_attractions_list(db: Session, data: schemas.GetSavedAttractions):
 # LIKE
 
 
-def get_liked_attraction(db: Session, user_id: int, attraction_id: int):
+def get_liked_attraction(db: Session, user_id: int, attraction_id: str):
     return (
         db.query(models.Likes)
         .filter(
@@ -87,9 +98,7 @@ def get_liked_attraction(db: Session, user_id: int, attraction_id: int):
 
 
 def like_attraction(db: Session, data: schemas.LikeAttraction):
-    new_record = models.Likes(
-        user_id=data.user_id, attraction_id=data.attraction_id
-    )
+    new_record = models.Likes(user_id=data.user_id, attraction_id=data.attraction_id)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -144,7 +153,7 @@ def get_liked_attractions_list(db: Session, data: schemas.GetLikedAttractions):
 # DONE
 
 
-def get_done_attraction(db: Session, user_id: int, attraction_id: int):
+def get_done_attraction(db: Session, user_id: int, attraction_id: str):
     return (
         db.query(models.Done)
         .filter(
@@ -156,9 +165,7 @@ def get_done_attraction(db: Session, user_id: int, attraction_id: int):
 
 
 def mark_as_done_attraction(db: Session, data: schemas.MarkAsDoneAttraction):
-    new_record = models.Done(
-        user_id=data.user_id, attraction_id=data.attraction_id
-    )
+    new_record = models.Done(user_id=data.user_id, attraction_id=data.attraction_id)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -183,9 +190,7 @@ def mark_as_done_attraction(db: Session, data: schemas.MarkAsDoneAttraction):
     return new_record
 
 
-def mark_as_undone_attraction(
-    db: Session, attraction_to_mark_as_undone: models.Done
-):
+def mark_as_undone_attraction(db: Session, attraction_to_mark_as_undone: models.Done):
     db.delete(attraction_to_mark_as_undone)
     db.commit()
     db.flush()

@@ -5,6 +5,7 @@ from app.db.database import SessionLocal, get_db
 from app.services.logger import Logger
 import requests
 import os
+import json
 
 
 router = APIRouter()
@@ -23,6 +24,7 @@ def get_attraction(
     attraction_id: str = Path(
         ..., title="Attraction ID", description="The ID of the attraction to get"
     ),
+    db: SessionLocal = Depends(get_db),
 ):
     url = f"https://places.googleapis.com/v1/places/{attraction_id}"
 
@@ -43,7 +45,25 @@ def get_attraction(
             },
         )
 
-    return response.json()
+    attraction = crud.get_attraction(db=db, attraction_id=attraction_id)
+    response = response.json()
+    if not attraction:
+        response["likes_count"] = 0
+        response["saved_count"] = 0
+        response["done_count"] = 0
+        response["avg_rating"] = None
+
+    else:
+        response["likes_count"] = attraction.likes_count
+        response["saved_count"] = attraction.saved_count
+        response["done_count"] = attraction.done_count
+
+        if attraction.rating_count > 0:
+            response["avg_rating"] = attraction.rating_total / attraction.rating_count
+        else:
+            response["avg_rating"] = None
+
+    return response
 
 
 @router.post(
@@ -60,6 +80,7 @@ def get_nearby_attractions(
         ..., title="Longitude", description="Center longitude for search"
     ),
     radius: float = Path(..., title="Radius", description="Search radius in meters"),
+    db: SessionLocal = Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchNearby"
 
@@ -91,7 +112,27 @@ def get_nearby_attractions(
             },
         )
 
-    return response.json()
+    response = response.json()
+    if len(response) > 0:
+        for place in response["places"]:
+            attraction = crud.get_attraction(db=db, attraction_id=place["id"])
+            if not attraction:
+                place["likes_count"] = 0
+                place["saved_count"] = 0
+                place["done_count"] = 0
+                place["avg_rating"] = None
+
+            else:
+                place["likes_count"] = attraction.likes_count
+                place["saved_count"] = attraction.saved_count
+                place["done_count"] = attraction.done_count
+
+                if attraction.rating_count > 0:
+                    place["avg_rating"] = attraction.rating_total / attraction.rating_count
+                else:
+                    place["avg_rating"] = None
+
+    return response
 
 
 @router.post(
@@ -100,7 +141,9 @@ def get_nearby_attractions(
     tags=["Get Attractions"],
     description="Searches attractions given a text query",
 )
-def search_attractions(data: schemas.SearchTextRequest):
+def search_attractions(
+    data: schemas.SearchTextRequest, db: SessionLocal = Depends(get_db)
+):
     url = "https://places.googleapis.com/v1/places:searchText"
 
     headers = {
@@ -122,7 +165,26 @@ def search_attractions(data: schemas.SearchTextRequest):
             },
         )
 
-    return response.json()
+    response = response.json()
+    for place in response["places"]:
+        attraction = crud.get_attraction(db=db, attraction_id=place["id"])
+        if not attraction:
+            place["likes_count"] = 0
+            place["saved_count"] = 0
+            place["done_count"] = 0
+            place["avg_rating"] = None
+
+        else:
+            place["likes_count"] = attraction.likes_count
+            place["saved_count"] = attraction.saved_count
+            place["done_count"] = attraction.done_count
+
+            if attraction.rating_count > 0:
+                place["avg_rating"] = attraction.rating_total / attraction.rating_count
+            else:
+                place["avg_rating"] = None
+
+    return response
 
 
 # SAVE
