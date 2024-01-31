@@ -69,3 +69,7 @@ class Comment(BaseModel):
     user_id: int
     attraction_id: str
     comment: str
+
+
+class SearchTextRequest(BaseModel):
+    textQuery: str

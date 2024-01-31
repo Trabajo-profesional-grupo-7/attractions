@@ -94,6 +94,37 @@ def get_nearby_attractions(
     return response.json()
 
 
+@router.post(
+    "/attractions/search",
+    status_code=201,
+    tags=["Get Attractions"],
+    description="Searches attractions given a text query",
+)
+def search_attractions(data: schemas.SearchTextRequest):
+    url = "https://places.googleapis.com/v1/places:searchText"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
+        "X-Goog-FieldMask": "places.displayName,places.id,places.adrFormatAddress",
+    }
+
+    data = {"textQuery": data.textQuery}
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": f"External API error: {response.status_code}",
+            },
+        )
+
+    return response.json()
+
+
 # SAVE
 
 
