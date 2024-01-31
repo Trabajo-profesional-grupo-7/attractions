@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class SaveAttraction(BaseModel):
     user_id: int
-    attraction_id: int
+    attraction_id: str
 
 
 class GetSavedAttractions(BaseModel):
@@ -15,7 +15,7 @@ class GetSavedAttractions(BaseModel):
 
 class MarkAsDoneAttraction(BaseModel):
     user_id: int
-    attraction_id: int
+    attraction_id: str
 
 
 class GetDoneAttractions(BaseModel):
@@ -26,7 +26,7 @@ class GetDoneAttractions(BaseModel):
 
 class LikeAttraction(BaseModel):
     user_id: int
-    attraction_id: int
+    attraction_id: str
 
 
 class GetLikedAttractions(BaseModel):
@@ -36,22 +36,22 @@ class GetLikedAttractions(BaseModel):
 
 
 class GetLikes(BaseModel):
-    attraction_id: int
+    attraction_id: str
 
 
 class RateAttraction(BaseModel):
     user_id: int
-    attraction_id: int
+    attraction_id: str
     rating: int
 
 
 class GetAvgAttractionRating(BaseModel):
-    attraction_id: int
+    attraction_id: str
 
 
 class CommentAttraction(BaseModel):
     user_id: int
-    attraction_id: int
+    attraction_id: str
     comment: str
 
 
@@ -67,5 +67,5 @@ class UpdateComment(BaseModel):
 class Comment(BaseModel):
     comment_id: int
     user_id: int
-    attraction_id: int
+    attraction_id: str
     comment: str

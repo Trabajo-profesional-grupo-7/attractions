@@ -8,17 +8,17 @@ from sqlalchemy import func
 
 def get_saved_attraction(db: Session, user_id: int, attraction_id: int):
     return (
-        db.query(models.SavedAttractions)
+        db.query(models.Saved)
         .filter(
-            models.SavedAttractions.user_id == user_id,
-            models.SavedAttractions.attraction_id == attraction_id,
+            models.Saved.user_id == user_id,
+            models.Saved.attraction_id == attraction_id,
         )
         .first()
     )
 
 
 def save_attraction(db: Session, data: schemas.SaveAttraction):
-    new_record = models.SavedAttractions(
+    new_record = models.Saved(
         user_id=data.user_id, attraction_id=data.attraction_id
     )
     db.add(new_record)
@@ -45,7 +45,7 @@ def save_attraction(db: Session, data: schemas.SaveAttraction):
     return new_record
 
 
-def unsave_attraction(db: Session, attraction_to_unsave: models.SavedAttractions):
+def unsave_attraction(db: Session, attraction_to_unsave: models.Saved):
     db.delete(attraction_to_unsave)
     db.commit()
     db.flush()
@@ -64,8 +64,8 @@ def unsave_attraction(db: Session, attraction_to_unsave: models.SavedAttractions
 
 def get_saved_attractions_list(db: Session, data: schemas.GetSavedAttractions):
     return (
-        db.query(models.SavedAttractions)
-        .filter(models.SavedAttractions.user_id == data.user_id)
+        db.query(models.Saved)
+        .filter(models.Saved.user_id == data.user_id)
         .offset(data.page)
         .limit(data.size)
         .all()
@@ -77,17 +77,17 @@ def get_saved_attractions_list(db: Session, data: schemas.GetSavedAttractions):
 
 def get_liked_attraction(db: Session, user_id: int, attraction_id: int):
     return (
-        db.query(models.AttractionLikes)
+        db.query(models.Likes)
         .filter(
-            models.AttractionLikes.user_id == user_id,
-            models.AttractionLikes.attraction_id == attraction_id,
+            models.Likes.user_id == user_id,
+            models.Likes.attraction_id == attraction_id,
         )
         .first()
     )
 
 
 def like_attraction(db: Session, data: schemas.LikeAttraction):
-    new_record = models.AttractionLikes(
+    new_record = models.Likes(
         user_id=data.user_id, attraction_id=data.attraction_id
     )
     db.add(new_record)
@@ -114,7 +114,7 @@ def like_attraction(db: Session, data: schemas.LikeAttraction):
     return new_record
 
 
-def unlike_attraction(db: Session, attraction_to_unlike: models.AttractionLikes):
+def unlike_attraction(db: Session, attraction_to_unlike: models.Likes):
     db.delete(attraction_to_unlike)
     db.commit()
     db.flush()
@@ -133,8 +133,8 @@ def unlike_attraction(db: Session, attraction_to_unlike: models.AttractionLikes)
 
 def get_liked_attractions_list(db: Session, data: schemas.GetLikedAttractions):
     return (
-        db.query(models.AttractionLikes)
-        .filter(models.AttractionLikes.user_id == data.user_id)
+        db.query(models.Likes)
+        .filter(models.Likes.user_id == data.user_id)
         .offset(data.page)
         .limit(data.size)
         .all()
@@ -146,17 +146,17 @@ def get_liked_attractions_list(db: Session, data: schemas.GetLikedAttractions):
 
 def get_done_attraction(db: Session, user_id: int, attraction_id: int):
     return (
-        db.query(models.DoneAttractions)
+        db.query(models.Done)
         .filter(
-            models.DoneAttractions.user_id == user_id,
-            models.DoneAttractions.attraction_id == attraction_id,
+            models.Done.user_id == user_id,
+            models.Done.attraction_id == attraction_id,
         )
         .first()
     )
 
 
 def mark_as_done_attraction(db: Session, data: schemas.MarkAsDoneAttraction):
-    new_record = models.DoneAttractions(
+    new_record = models.Done(
         user_id=data.user_id, attraction_id=data.attraction_id
     )
     db.add(new_record)
@@ -184,7 +184,7 @@ def mark_as_done_attraction(db: Session, data: schemas.MarkAsDoneAttraction):
 
 
 def mark_as_undone_attraction(
-    db: Session, attraction_to_mark_as_undone: models.DoneAttractions
+    db: Session, attraction_to_mark_as_undone: models.Done
 ):
     db.delete(attraction_to_mark_as_undone)
     db.commit()
@@ -207,8 +207,8 @@ def mark_as_undone_attraction(
 
 def get_done_attractions_list(db: Session, data: schemas.GetDoneAttractions):
     return (
-        db.query(models.DoneAttractions)
-        .filter(models.DoneAttractions.user_id == data["user_id"])
+        db.query(models.Done)
+        .filter(models.Done.user_id == data["user_id"])
         .offset(data["page"])
         .limit(data["size"])
         .all()
@@ -219,7 +219,7 @@ def get_done_attractions_list(db: Session, data: schemas.GetDoneAttractions):
 
 
 def rate_attraction(db: Session, data: schemas.RateAttraction):
-    new_record = models.AttractionRatings(
+    new_record = models.Ratings(
         user_id=data.user_id, attraction_id=data.attraction_id, rating=data.rating
     )
     db.add(new_record)
@@ -251,7 +251,7 @@ def rate_attraction(db: Session, data: schemas.RateAttraction):
 
 
 def add_comment(db: Session, data: schemas.CommentAttraction):
-    new_record = models.AttractionComments(
+    new_record = models.Comments(
         user_id=data.user_id, attraction_id=data.attraction_id, comment=data.comment
     )
     db.add(new_record)
@@ -263,9 +263,9 @@ def add_comment(db: Session, data: schemas.CommentAttraction):
 
 def get_comment_by_id(db: Session, comment_id: int):
     return (
-        db.query(models.AttractionComments)
+        db.query(models.Comments)
         .filter(
-            models.AttractionComments.comment_id == comment_id,
+            models.Comments.comment_id == comment_id,
         )
         .first()
     )
