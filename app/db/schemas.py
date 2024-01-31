@@ -72,4 +72,5 @@ class Comment(BaseModel):
 
 
 class SearchTextRequest(BaseModel):
-    textQuery: str
+    user_id: int
+    query: str

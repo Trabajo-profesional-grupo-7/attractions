@@ -283,3 +283,15 @@ def update_comment(db: Session, comment_to_edit: schemas.Comment, updated_commen
     db.refresh(comment_to_edit)
 
     return comment_to_edit
+
+
+# SEARCH
+
+
+def add_search(db: Session, user_id: int, query: str):
+    new_record = models.Searches(user_id=user_id, query=query)
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+
+    return new_record

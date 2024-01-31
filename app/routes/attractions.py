@@ -128,7 +128,9 @@ def get_nearby_attractions(
                 place["done_count"] = attraction.done_count
 
                 if attraction.rating_count > 0:
-                    place["avg_rating"] = attraction.rating_total / attraction.rating_count
+                    place["avg_rating"] = (
+                        attraction.rating_total / attraction.rating_count
+                    )
                 else:
                     place["avg_rating"] = None
 
@@ -152,9 +154,7 @@ def search_attractions(
         "X-Goog-FieldMask": "places.displayName,places.id,places.adrFormatAddress",
     }
 
-    data = {"textQuery": data.textQuery}
-
-    response = requests.post(url, json=data, headers=headers)
+    response = requests.post(url, json={"textQuery": data.query}, headers=headers)
 
     if response.status_code != 200:
         raise HTTPException(
@@ -164,6 +164,8 @@ def search_attractions(
                 "message": f"External API error: {response.status_code}",
             },
         )
+
+    crud.add_search(db=db, user_id=data.user_id, query=data.query)
 
     response = response.json()
     for place in response["places"]:
