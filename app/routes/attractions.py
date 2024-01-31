@@ -1,11 +1,64 @@
 from fastapi import APIRouter
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Query, Path
 from app.db import crud, schemas
 from app.db.database import SessionLocal, get_db
 from app.services.logger import Logger
+import requests
+import os
 
 
 router = APIRouter()
+
+
+# GET ATTRACTIONS
+
+
+@router.post(
+    "/attractions/nearby/{latitude}/{longitude}/{radius}",
+    status_code=201,
+    tags=["Get Attractions"],
+    description="Gets nearby attractions given a latitude and longitude",
+)
+def get_nearby_attractions(
+    latitude: float = Path(
+        ..., title="Latitude", description="Center latitude for search"
+    ),
+    longitude: float = Path(
+        ..., title="Longitude", description="Center longitude for search"
+    ),
+    radius: float = Path(..., title="Radius", description="Search radius in meters"),
+):
+    url = "https://places.googleapis.com/v1/places:searchNearby"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
+        "X-Goog-FieldMask": "places.displayName,places.id",
+    }
+
+    data = {
+        "includedTypes": ["historical_landmark", "tourist_attraction"],
+        "maxResultCount": 10,
+        "locationRestriction": {
+            "circle": {
+                "center": {"latitude": latitude, "longitude": longitude},
+                "radius": radius,
+            }
+        },
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": f"External API error: {response.status_code}",
+            },
+        )
+
+    return response.json()
 
 
 # SAVE
@@ -14,7 +67,7 @@ router = APIRouter()
 @router.post(
     "/attractions/save",
     status_code=201,
-    tags=["Attractions"],
+    tags=["Save Attraction"],
     description="Saves an attraction for a user",
 )
 def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
@@ -32,7 +85,7 @@ def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get
 @router.delete(
     "/attractions/unsave",
     status_code=204,
-    tags=["Attractions"],
+    tags=["Save Attraction"],
     description="Unsaves an attraction for a user",
 )
 def unsave_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
@@ -54,7 +107,7 @@ def unsave_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(g
 @router.get(
     "/attractions/save-list",
     status_code=200,
-    tags=["Attractions"],
+    tags=["Save Attraction"],
     description="Returns a list of the attractions saved by an user",
 )
 def get_saved_attractions_list(
@@ -73,7 +126,7 @@ def get_saved_attractions_list(
 @router.post(
     "/attractions/like",
     status_code=201,
-    tags=["Attractions"],
+    tags=["Like Attraction"],
     description="Likes an attraction for a user",
 )
 def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
@@ -91,7 +144,7 @@ def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get
 @router.delete(
     "/attractions/unlike",
     status_code=204,
-    tags=["Attractions"],
+    tags=["Like Attraction"],
     description="Unlikes an attraction for a user",
 )
 def unlike_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
@@ -113,7 +166,7 @@ def unlike_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(g
 @router.get(
     "/attractions/like-list",
     status_code=200,
-    tags=["Attractions"],
+    tags=["Like Attraction"],
     description="Returns a list of the attractions liked by an user",
 )
 def get_liked_attractions_list(
@@ -132,7 +185,7 @@ def get_liked_attractions_list(
 @router.post(
     "/attractions/done",
     status_code=201,
-    tags=["Attractions"],
+    tags=["Done Attraction"],
     description="Marks as done a attraction for a user",
 )
 def mark_as_done_attraction(
@@ -155,7 +208,7 @@ def mark_as_done_attraction(
 @router.delete(
     "/attractions/undone",
     status_code=204,
-    tags=["Attractions"],
+    tags=["Done Attraction"],
     description="Marks as undone an attraction for a user",
 )
 def mark_as_undone_attraction(
@@ -179,7 +232,7 @@ def mark_as_undone_attraction(
 @router.get(
     "/attractions/done-list",
     status_code=200,
-    tags=["Attractions"],
+    tags=["Done Attraction"],
     description="Returns a list of the attractions done by an user",
 )
 def get_done_attractions_list(
@@ -198,7 +251,7 @@ def get_done_attractions_list(
 @router.post(
     "/attractions/rate",
     status_code=201,
-    tags=["Attractions"],
+    tags=["Rate Attraction"],
     description="Rates an attraction by an user",
 )
 def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get_db)):
@@ -211,7 +264,7 @@ def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get
 @router.post(
     "/attractions/comment",
     status_code=201,
-    tags=["Attractions"],
+    tags=["Comment Attraction"],
     description="Comments an attraction for an user",
 )
 def comment_attraction(
@@ -223,7 +276,7 @@ def comment_attraction(
 @router.delete(
     "/attractions/comment",
     status_code=204,
-    tags=["Attractions"],
+    tags=["Comment Attraction"],
     description="Deletes a comment by comment_id",
 )
 def delete_comment(
@@ -241,7 +294,7 @@ def delete_comment(
 @router.put(
     "/attractions/comment",
     status_code=201,
-    tags=["Attractions"],
+    tags=["Comment Attraction"],
     description="Edits a comment by comment_id",
 )
 def update_comment(
