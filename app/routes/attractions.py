@@ -5,7 +5,6 @@ from app.db.database import SessionLocal, get_db
 from app.services.logger import Logger
 import requests
 import os
-import json
 
 
 router = APIRouter()
@@ -15,7 +14,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/attractions/{attraction_id}",
+    "/attractions/byid/{attraction_id}",
     status_code=201,
     tags=["Get Attractions"],
     description="Gets an attraction given its ID",
@@ -383,7 +382,24 @@ def get_done_attractions_list(
     description="Rates an attraction by an user",
 )
 def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get_db)):
-    return crud.rate_attraction(db=db, data=data)
+    if not 1 <= data.rating <= 5:
+        Logger().info("Rating must be between 1 and 5")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "error",
+                "message": "Rating must be between 1 and 5",
+            },
+        )
+
+    rating = crud.get_rating(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
+
+    if not rating:
+        return crud.rate_attraction(db=db, data=data)
+
+    return crud.update_rating(db=db, rating_to_update=rating, new_rating=data.rating)
 
 
 # COMMENT

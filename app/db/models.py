@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, CheckConstraint
 import datetime
 
 from .database import Base
@@ -25,7 +25,7 @@ class Ratings(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
-    rating = Column(Integer)
+    rating = Column(Integer, CheckConstraint('rating >= 1 AND rating <= 5', name='check_rating'))
     rated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

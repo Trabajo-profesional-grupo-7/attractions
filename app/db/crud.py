@@ -223,6 +223,34 @@ def get_done_attractions_list(db: Session, data: schemas.GetDoneAttractions):
 # RATE
 
 
+def get_rating(db: Session, user_id: int, attraction_id: str):
+    return (
+        db.query(models.Ratings)
+        .filter(models.Ratings.user_id == user_id)
+        .filter(models.Ratings.attraction_id == attraction_id)
+        .first()
+    )
+
+
+def update_rating(db: Session, rating_to_update: models.Ratings, new_rating: float):
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == rating_to_update.attraction_id)
+        .first()
+    )
+
+    attraction.rating_total -= float(rating_to_update.rating)
+    attraction.rating_total += float(new_rating)
+    db.commit()
+    db.refresh(attraction)
+
+    rating_to_update.rating = new_rating
+    db.commit()
+    db.refresh(rating_to_update)
+
+    return rating_to_update
+
+
 def rate_attraction(db: Session, data: schemas.RateAttraction):
     new_record = models.Ratings(
         user_id=data.user_id, attraction_id=data.attraction_id, rating=data.rating
