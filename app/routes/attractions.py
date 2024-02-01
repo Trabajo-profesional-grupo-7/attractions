@@ -198,17 +198,24 @@ def search_attractions(
     description="Saves an attraction for a user",
 )
 def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
-    if crud.get_saved_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
-    ):
-        Logger().info("Attraction already saved by user")
-        raise HTTPException(
-            status_code=404,
-            detail={"status": "error", "message": "Attraction already saved by user"},
+    try:
+        if crud.get_saved_attraction(
+            db=db, user_id=data.user_id, attraction_id=data.attraction_id
+        ):
+            Logger().info("Attraction already saved by user")
+            raise HTTPException(
+                status_code=404,
+                detail={"status": "error", "message": "Attraction already saved by user"},
+            )
+        return crud.save_attraction(
+            db=db, user_id=data.user_id, attraction_id=data.attraction_id
         )
-    return crud.save_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
-    )
+    except Exception as e:
+        Logger().error(f"Error in save_attraction: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={"status": "error", "message": "Internal server error"},
+        )
 
 
 @router.delete(
