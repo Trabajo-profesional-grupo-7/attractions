@@ -10,7 +10,7 @@ import os
 router = APIRouter()
 
 
-# GET ATTRACTIONS
+# ATTRACTIONS
 
 
 @router.get(
@@ -143,7 +143,7 @@ def get_nearby_attractions(
     description="Searches attractions given a text query",
 )
 def search_attractions(
-    data: schemas.SearchTextRequest, db: SessionLocal = Depends(get_db)
+    data: schemas.SearchAttractionsByText, db: SessionLocal = Depends(get_db)
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
 
@@ -206,7 +206,9 @@ def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get
             status_code=404,
             detail={"status": "error", "message": "Attraction already saved by user"},
         )
-    return crud.save_attraction(db=db, data=data)
+    return crud.save_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
 
 
 @router.delete(
@@ -243,8 +245,7 @@ def get_saved_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
-    data = schemas.GetSavedAttractions(user_id=user_id, page=page, size=size)
-    return crud.get_saved_attractions_list(db=db, data=data)
+    return crud.get_saved_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
 
 # LIKE
@@ -265,7 +266,9 @@ def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get
             status_code=404,
             detail={"status": "error", "message": "Attraction already liked by user"},
         )
-    return crud.like_attraction(db=db, data=data)
+    return crud.like_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
 
 
 @router.delete(
@@ -302,8 +305,7 @@ def get_liked_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
-    data = schemas.GetLikedAttractions(user_id=user_id, page=page, size=size)
-    return crud.get_liked_attractions_list(db=db, data=data)
+    return crud.get_liked_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
 
 # DONE
@@ -329,7 +331,9 @@ def mark_as_done_attraction(
                 "message": "Attraction already marked as done by user",
             },
         )
-    return crud.mark_as_done_attraction(db=db, data=data)
+    return crud.mark_as_done_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
 
 
 @router.delete(
@@ -368,8 +372,7 @@ def get_done_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db: SessionLocal = Depends(get_db),
 ):
-    data = {"user_id": user_id, "page": page, "size": size}
-    return crud.get_done_attractions_list(db=db, data=data)
+    return crud.get_done_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
 
 # RATE
@@ -381,7 +384,7 @@ def get_done_attractions_list(
     tags=["Rate Attraction"],
     description="Rates an attraction by an user",
 )
-def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get_db)):
+def rate_attraction(data: schemas.AddRating, db: SessionLocal = Depends(get_db)):
     if not 1 <= data.rating <= 5:
         Logger().info("Rating must be between 1 and 5")
         raise HTTPException(
@@ -397,7 +400,12 @@ def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get
     )
 
     if not rating:
-        return crud.rate_attraction(db=db, data=data)
+        return crud.rate_attraction(
+            db=db,
+            user_id=data.user_id,
+            attraction_id=data.attraction_id,
+            rating=data.rating,
+        )
 
     return crud.update_rating(db=db, rating_to_update=rating, new_rating=data.rating)
 
@@ -412,9 +420,14 @@ def rate_attraction(data: schemas.RateAttraction, db: SessionLocal = Depends(get
     description="Comments an attraction for an user",
 )
 def comment_attraction(
-    data: schemas.CommentAttraction, db: SessionLocal = Depends(get_db)
+    data: schemas.AddComment, db: SessionLocal = Depends(get_db)
 ):
-    return crud.add_comment(db=db, data=data)
+    return crud.add_comment(
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
+        comment=data.comment,
+    )
 
 
 @router.delete(
@@ -424,7 +437,7 @@ def comment_attraction(
     description="Deletes a comment by comment_id",
 )
 def delete_comment(
-    data: schemas.DeleteCommentAttraction, db: SessionLocal = Depends(get_db)
+    data: schemas.DeleteComment, db: SessionLocal = Depends(get_db)
 ):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
     if not comment:
@@ -432,7 +445,7 @@ def delete_comment(
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
-    crud.delete_record(db=db, record=comment)
+    crud.delete_comment(db=db, comment_to_delete=comment)
 
 
 @router.put(
