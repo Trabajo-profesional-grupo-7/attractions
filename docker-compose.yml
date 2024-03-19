@@ -7,7 +7,7 @@ services:
     container_name: attractions
     restart: always
     ports:
-      - ${PORT}:8000
+      - ${PORT}:8003
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
