@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -40,3 +42,9 @@ class UpdateComment(BaseModel):
 class SearchAttractionsByText(BaseModel):
     user_id: int
     query: str
+
+
+class ScheduleAttraction(BaseModel):
+    user_id: int
+    attraction_id: str
+    scheduled_time: datetime

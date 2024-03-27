@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, CheckConstraint
 import datetime
+
+from sqlalchemy import CheckConstraint, Column, DateTime, Integer, String
 
 from .database import Base
 
@@ -25,7 +26,9 @@ class Ratings(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
-    rating = Column(Integer, CheckConstraint('rating >= 1 AND rating <= 5', name='check_rating'))
+    rating = Column(
+        Integer, CheckConstraint("rating >= 1 AND rating <= 5", name="check_rating")
+    )
     rated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -65,3 +68,13 @@ class Attractions(Base):
     done_count = Column(Integer, default=0)
     rating_count = Column(Integer, default=0)
     rating_total = Column(Integer, default=0)
+    scheduled_count = Column(Integer, default=0)
+
+
+class Scheduled(Base):
+    __tablename__ = "scheduled"
+
+    user_id = Column(Integer, primary_key=True)
+    attraction_id = Column(String, primary_key=True)
+    scheduled_time = Column(DateTime)
+    scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)

@@ -1,11 +1,11 @@
-from fastapi import APIRouter
-from fastapi import Depends, HTTPException, Query, Path
+import os
+
+import requests
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+
 from app.db import crud, schemas
 from app.db.database import SessionLocal, get_db
 from app.services.logger import Logger
-import requests
-import os
-
 
 router = APIRouter()
 
@@ -462,4 +462,35 @@ def update_comment(
         )
     return crud.update_comment(
         db=db, comment_to_edit=comment, updated_comment=data.new_comment
+    )
+
+
+# SCHEDULED
+
+
+@router.post(
+    "/attractions/scheduled",
+    status_code=201,
+    tags=["Schedule Attraction"],
+    description="Schedules an attraction for a user at a certain timestamp",
+)
+def schedule_attraction(
+    data: schemas.ScheduleAttraction, db: SessionLocal = Depends(get_db)
+):
+    if crud.get_scheduled_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    ):
+        Logger().info("Attraction already scheduled by user")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Attraction already scheduled by user",
+            },
+        )
+    return crud.schedule_attraction(
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
+        scheduled_time=data.scheduled_time,
     )

@@ -1,6 +1,8 @@
-from sqlalchemy.orm import Session
-from . import models
+import datetime
 
+from sqlalchemy.orm import Session
+
+from . import models
 
 # ATTRACTIONS
 
@@ -326,5 +328,49 @@ def add_search(db: Session, user_id: int, query: str):
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
+
+    return new_record
+
+
+# SCHEDULE
+
+
+def get_scheduled_attraction(db: Session, user_id: int, attraction_id: str):
+    return (
+        db.query(models.Scheduled)
+        .filter(
+            models.Scheduled.user_id == user_id,
+            models.Scheduled.attraction_id == attraction_id,
+        )
+        .first()
+    )
+
+
+def schedule_attraction(
+    db: Session, user_id: int, attraction_id: str, scheduled_time: datetime
+):
+    new_record = models.Scheduled(
+        user_id=user_id, attraction_id=attraction_id, scheduled_time=scheduled_time
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+
+    attraction = (
+        db.query(models.Attractions)
+        .filter(models.Attractions.attraction_id == attraction_id)
+        .first()
+    )
+
+    if not attraction:
+        attraction = models.Attractions(attraction_id=attraction_id)
+        db.add(attraction)
+        db.commit()
+        db.refresh(attraction)
+
+    attraction.scheduled_count += 1
+
+    db.commit()
+    db.refresh(attraction)
 
     return new_record
