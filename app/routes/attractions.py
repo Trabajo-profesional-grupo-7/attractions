@@ -506,3 +506,20 @@ def unschedule_attraction(data: schemas.UnscheduleAttraction, db=Depends(get_db)
             },
         )
     crud.unschedule_attraction(db=db, attraction_to_unschedule=scheduled_attraction)
+
+
+@router.get(
+    "/attractions/scheduled-list",
+    status_code=200,
+    tags=["Scheduled Attraction"],
+    description="Returns a list of the attractions scheduled by an user",
+)
+def get_scheduled_attractions_list(
+    user_id: int = Query(..., description="User ID"),
+    page: int = Query(0, description="Page number", ge=0),
+    size: int = Query(10, description="Number of items per page", ge=1, le=100),
+    db=Depends(get_db),
+):
+    return crud.get_scheduled_attractions_list(
+        db=db, user_id=user_id, page=page, size=size
+    )

@@ -404,3 +404,13 @@ def unschedule_attraction(db: Session, attraction_to_unschedule: models.Schedule
 
     db.commit()
     db.refresh(attraction)
+
+
+def get_scheduled_attractions_list(db: Session, user_id: int, page: int, size: int):
+    return (
+        db.query(models.Scheduled)
+        .filter(models.Scheduled.user_id == user_id)
+        .offset(page)
+        .limit(size)
+        .all()
+    )
