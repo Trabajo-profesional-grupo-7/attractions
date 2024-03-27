@@ -465,7 +465,7 @@ def update_comment(
     )
 
 
-# SCHEDULED
+# SCHEDULE
 
 
 @router.post(
@@ -477,20 +477,18 @@ def update_comment(
 def schedule_attraction(
     data: schemas.ScheduleAttraction, db: SessionLocal = Depends(get_db)
 ):
-    if crud.get_scheduled_attraction(
+    scheduled = crud.get_scheduled_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
-    ):
-        Logger().info("Attraction already scheduled by user")
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "status": "error",
-                "message": "Attraction already scheduled by user",
-            },
+    )
+
+    if not scheduled:
+        return crud.schedule_attraction(
+            db=db,
+            user_id=data.user_id,
+            attraction_id=data.attraction_id,
+            scheduled_time=data.scheduled_time,
         )
-    return crud.schedule_attraction(
-        db=db,
-        user_id=data.user_id,
-        attraction_id=data.attraction_id,
-        scheduled_time=data.scheduled_time,
+
+    return crud.update_scheduled_attraction(
+        db=db, scheduled_to_update=scheduled, new_scheduled_time=data.scheduled_time
     )

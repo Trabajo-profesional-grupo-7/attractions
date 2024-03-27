@@ -374,3 +374,14 @@ def schedule_attraction(
     db.refresh(attraction)
 
     return new_record
+
+
+def update_scheduled_attraction(
+    db: Session, scheduled_to_update: models.Scheduled, new_scheduled_time: datetime
+):
+    scheduled_to_update.scheduled_time = new_scheduled_time
+
+    db.commit()
+    db.refresh(scheduled_to_update)
+
+    return scheduled_to_update
