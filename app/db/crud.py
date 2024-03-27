@@ -385,3 +385,22 @@ def update_scheduled_attraction(
     db.refresh(scheduled_to_update)
 
     return scheduled_to_update
+
+
+def unschedule_attraction(db: Session, attraction_to_unschedule: models.Scheduled):
+    db.delete(attraction_to_unschedule)
+    db.commit()
+    db.flush()
+
+    attraction = (
+        db.query(models.Attractions)
+        .filter(
+            models.Attractions.attraction_id == attraction_to_unschedule.attraction_id
+        )
+        .first()
+    )
+
+    attraction.scheduled_count -= 1
+
+    db.commit()
+    db.refresh(attraction)

@@ -4,7 +4,7 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from app.db import crud, schemas
-from app.db.database import SessionLocal, get_db
+from app.db.database import get_db
 from app.services.logger import Logger
 
 router = APIRouter()
@@ -23,7 +23,7 @@ def get_attraction(
     attraction_id: str = Path(
         ..., title="Attraction ID", description="The ID of the attraction to get"
     ),
-    db: SessionLocal = Depends(get_db),
+    db=Depends(get_db),
 ):
     url = f"https://places.googleapis.com/v1/places/{attraction_id}"
 
@@ -79,7 +79,7 @@ def get_nearby_attractions(
         ..., title="Longitude", description="Center longitude for search"
     ),
     radius: float = Path(..., title="Radius", description="Search radius in meters"),
-    db: SessionLocal = Depends(get_db),
+    db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchNearby"
 
@@ -142,9 +142,7 @@ def get_nearby_attractions(
     tags=["Get Attractions"],
     description="Searches attractions given a text query",
 )
-def search_attractions(
-    data: schemas.SearchAttractionsByText, db: SessionLocal = Depends(get_db)
-):
+def search_attractions(data: schemas.SearchAttractionsByText, db=Depends(get_db)):
     url = "https://places.googleapis.com/v1/places:searchText"
 
     headers = {
@@ -197,7 +195,7 @@ def search_attractions(
     tags=["Save Attraction"],
     description="Saves an attraction for a user",
 )
-def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
+def save_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
     if crud.get_saved_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
@@ -217,7 +215,7 @@ def save_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get
     tags=["Save Attraction"],
     description="Unsaves an attraction for a user",
 )
-def unsave_attraction(data: schemas.SaveAttraction, db: SessionLocal = Depends(get_db)):
+def unsave_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
     saved_attraction = crud.get_saved_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
@@ -243,7 +241,7 @@ def get_saved_attractions_list(
     user_id: int = Query(..., description="User ID"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
-    db: SessionLocal = Depends(get_db),
+    db=Depends(get_db),
 ):
     return crud.get_saved_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
@@ -257,7 +255,7 @@ def get_saved_attractions_list(
     tags=["Like Attraction"],
     description="Likes an attraction for a user",
 )
-def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
+def like_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
     if crud.get_liked_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
@@ -277,7 +275,7 @@ def like_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get
     tags=["Like Attraction"],
     description="Unlikes an attraction for a user",
 )
-def unlike_attraction(data: schemas.LikeAttraction, db: SessionLocal = Depends(get_db)):
+def unlike_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
     liked_attraction = crud.get_liked_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
@@ -303,7 +301,7 @@ def get_liked_attractions_list(
     user_id: int = Query(..., description="User ID"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
-    db: SessionLocal = Depends(get_db),
+    db=Depends(get_db),
 ):
     return crud.get_liked_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
@@ -317,9 +315,7 @@ def get_liked_attractions_list(
     tags=["Done Attraction"],
     description="Marks as done a attraction for a user",
 )
-def mark_as_done_attraction(
-    data: schemas.MarkAsDoneAttraction, db: SessionLocal = Depends(get_db)
-):
+def mark_as_done_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_db)):
     if crud.get_done_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
@@ -342,9 +338,7 @@ def mark_as_done_attraction(
     tags=["Done Attraction"],
     description="Marks as undone an attraction for a user",
 )
-def mark_as_undone_attraction(
-    data: schemas.MarkAsDoneAttraction, db: SessionLocal = Depends(get_db)
-):
+def mark_as_undone_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_db)):
     done_attraction = crud.get_done_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
@@ -370,7 +364,7 @@ def get_done_attractions_list(
     user_id: int = Query(..., description="User ID"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
-    db: SessionLocal = Depends(get_db),
+    db=Depends(get_db),
 ):
     return crud.get_done_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
@@ -384,7 +378,7 @@ def get_done_attractions_list(
     tags=["Rate Attraction"],
     description="Rates an attraction by an user",
 )
-def rate_attraction(data: schemas.AddRating, db: SessionLocal = Depends(get_db)):
+def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
     if not 1 <= data.rating <= 5:
         Logger().info("Rating must be between 1 and 5")
         raise HTTPException(
@@ -419,7 +413,7 @@ def rate_attraction(data: schemas.AddRating, db: SessionLocal = Depends(get_db))
     tags=["Comment Attraction"],
     description="Comments an attraction for an user",
 )
-def comment_attraction(data: schemas.AddComment, db: SessionLocal = Depends(get_db)):
+def comment_attraction(data: schemas.AddComment, db=Depends(get_db)):
     return crud.add_comment(
         db=db,
         user_id=data.user_id,
@@ -434,7 +428,7 @@ def comment_attraction(data: schemas.AddComment, db: SessionLocal = Depends(get_
     tags=["Comment Attraction"],
     description="Deletes a comment by comment_id",
 )
-def delete_comment(data: schemas.DeleteComment, db: SessionLocal = Depends(get_db)):
+def delete_comment(data: schemas.DeleteComment, db=Depends(get_db)):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
     if not comment:
         Logger().info("Comment not found")
@@ -452,7 +446,7 @@ def delete_comment(data: schemas.DeleteComment, db: SessionLocal = Depends(get_d
 )
 def update_comment(
     data: schemas.UpdateComment,
-    db: SessionLocal = Depends(get_db),
+    db=Depends(get_db),
 ):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
     if not comment:
@@ -474,9 +468,7 @@ def update_comment(
     tags=["Schedule Attraction"],
     description="Schedules an attraction for a user at a certain timestamp",
 )
-def schedule_attraction(
-    data: schemas.ScheduleAttraction, db: SessionLocal = Depends(get_db)
-):
+def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
     scheduled = crud.get_scheduled_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
@@ -492,3 +484,25 @@ def schedule_attraction(
     return crud.update_scheduled_attraction(
         db=db, scheduled_to_update=scheduled, new_scheduled_time=data.scheduled_time
     )
+
+
+@router.delete(
+    "/attractions/unschedule",
+    status_code=204,
+    tags=["Schedule Attraction"],
+    description="Unschedules an attraction for a user",
+)
+def unschedule_attraction(data: schemas.UnscheduleAttraction, db=Depends(get_db)):
+    scheduled_attraction = crud.get_scheduled_attraction(
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    )
+    if not scheduled_attraction:
+        Logger().info("Attraction has not been scheduled by user")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Attraction has not been scheduled by user",
+            },
+        )
+    crud.unschedule_attraction(db=db, attraction_to_unschedule=scheduled_attraction)

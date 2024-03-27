@@ -48,3 +48,8 @@ class ScheduleAttraction(BaseModel):
     user_id: int
     attraction_id: str
     scheduled_time: datetime
+
+
+class UnscheduleAttraction(BaseModel):
+    user_id: int
+    attraction_id: str
