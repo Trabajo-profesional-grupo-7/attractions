@@ -1,5 +1,6 @@
 import os
 
+import boto3
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
@@ -184,6 +185,45 @@ def search_attractions(data: schemas.SearchAttractionsByText, db=Depends(get_db)
                 place["avg_rating"] = None
 
     return response
+
+
+@router.get(
+    "/attractions/recommendations/{attraction_id}",
+    status_code=201,
+    tags=["Get Attractions"],
+    description="Gets similar attractions given an attraction ID",
+)
+def get_attraction_recommendations(
+    attraction_id: str = Path(
+        ..., title="Attraction ID", description="The ID of the attraction"
+    )
+):
+
+    session = boto3.Session(
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    )
+
+    dynamodb = session.resource("dynamodb", region_name="us-east-2")
+
+    table_name = "attractions"
+    table = dynamodb.Table(table_name)
+
+    key = {"attraction_id": attraction_id}
+    response = table.get_item(Key=key)
+    recommendations = response.get("Item")
+
+    if not recommendations:
+        Logger().info("No similar attractions were found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "No similar attractions were found",
+            },
+        )
+
+    return recommendations
 
 
 # SAVE
