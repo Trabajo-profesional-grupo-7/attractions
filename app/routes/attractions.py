@@ -196,7 +196,9 @@ def search_attractions(data: schemas.SearchAttractionsByText, db=Depends(get_db)
 def get_attraction_recommendations(
     attraction_id: str = Path(
         ..., title="Attraction ID", description="The ID of the attraction"
-    )
+    ),
+    page: int = Query(0, description="Page number", ge=0),
+    size: int = Query(10, description="Number of items per page", ge=1, le=100),
 ):
 
     session = boto3.Session(
@@ -223,7 +225,7 @@ def get_attraction_recommendations(
             },
         )
 
-    return recommendations
+    return recommendations["similar_attractions"][page * size : (page + 1) * size]
 
 
 # SAVE
@@ -551,7 +553,7 @@ def unschedule_attraction(data: schemas.UnscheduleAttraction, db=Depends(get_db)
 @router.get(
     "/attractions/scheduled-list",
     status_code=200,
-    tags=["Scheduled Attraction"],
+    tags=["Schedule Attraction"],
     description="Returns a list of the attractions scheduled by an user",
 )
 def get_scheduled_attractions_list(
