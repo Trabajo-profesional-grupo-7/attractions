@@ -158,6 +158,57 @@ def search_attractions(
     return formatted_response
 
 
+@router.post(
+    "/attractions/autocomplete",
+    status_code=201,
+    tags=["Get Attractions"],
+    description="Returns attractions predictions given a substring. Can filter by a list of attraction types.",
+)
+def autocomplete_attractions(
+    data: schemas.AutocompleteAttractions,
+    attraction_types: List[str] = Query(
+        None,
+        title="Attraction Types",
+        description="Filter by attraction types",
+    ),
+    db=Depends(get_db),
+):
+    url = "https://places.googleapis.com/v1/places:autocomplete"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
+    }
+
+    response = requests.post(
+        url,
+        json={"input": data.query, "includedPrimaryTypes": attraction_types},
+        headers=headers,
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": f"External API error: {response.status_code}",
+            },
+        )
+
+    formatted_response = []
+
+    if "suggestions" in response.json().keys():
+        for attraction in response.json()["suggestions"]:
+            formatted_response.append(
+                {
+                    "attraction_id": attraction["placePrediction"]["placeId"],
+                    "attraction_name": attraction["placePrediction"]["text"]["text"],
+                }
+            )
+
+    return formatted_response
+
+
 @router.get(
     "/attractions/recommendations/{attraction_id}",
     status_code=201,

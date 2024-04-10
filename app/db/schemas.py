@@ -44,6 +44,10 @@ class SearchAttractionsByText(BaseModel):
     query: str
 
 
+class AutocompleteAttractions(BaseModel):
+    query: str
+
+
 class ScheduleAttraction(BaseModel):
     user_id: int
     attraction_id: str
