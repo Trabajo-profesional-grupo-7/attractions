@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import CheckConstraint, Column, DateTime, Integer, String
+from sqlalchemy import CheckConstraint, Column, Date, DateTime, Integer, String
 
 from .database import Base
 
@@ -73,8 +73,8 @@ class Attractions(Base):
 
 class Scheduled(Base):
     __tablename__ = "scheduled"
-
-    user_id = Column(Integer, primary_key=True)
-    attraction_id = Column(String, primary_key=True)
-    scheduled_time = Column(DateTime)
+    schedule_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer)
+    attraction_id = Column(String)
+    day = Column(Date)
     scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)

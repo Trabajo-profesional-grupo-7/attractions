@@ -1,4 +1,5 @@
 import datetime
+from datetime import date
 
 from sqlalchemy.orm import Session
 
@@ -335,23 +336,38 @@ def add_search(db: Session, user_id: int, query: str):
 # SCHEDULE
 
 
-def get_scheduled_attraction(db: Session, user_id: int, attraction_id: str):
+def get_scheduled_attraction_by_id(db: Session, schedule_id: int):
     return (
         db.query(models.Scheduled)
         .filter(
-            models.Scheduled.user_id == user_id,
-            models.Scheduled.attraction_id == attraction_id,
+            models.Scheduled.schedule_id == schedule_id,
         )
         .first()
     )
 
 
-def schedule_attraction(
-    db: Session, user_id: int, attraction_id: str, scheduled_time: datetime
+def check_if_schedule_is_valid(
+    db: Session, user_id: int, attraction_id: str, day: datetime.date
 ):
-    new_record = models.Scheduled(
-        user_id=user_id, attraction_id=attraction_id, scheduled_time=scheduled_time
+    scheduled_attraction = (
+        db.query(models.Scheduled)
+        .filter(
+            models.Scheduled.user_id == user_id,
+            models.Scheduled.attraction_id == attraction_id,
+            models.Scheduled.day == day,
+        )
+        .first()
     )
+
+    if scheduled_attraction:
+        return False
+    return True
+
+
+def schedule_attraction(
+    db: Session, user_id: int, attraction_id: str, day: datetime.date
+):
+    new_record = models.Scheduled(user_id=user_id, attraction_id=attraction_id, day=day)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -377,9 +393,9 @@ def schedule_attraction(
 
 
 def update_scheduled_attraction(
-    db: Session, scheduled_to_update: models.Scheduled, new_scheduled_time: datetime
+    db: Session, scheduled_to_update: models.Scheduled, new_day: date
 ):
-    scheduled_to_update.scheduled_time = new_scheduled_time
+    scheduled_to_update.day = new_day
 
     db.commit()
     db.refresh(scheduled_to_update)

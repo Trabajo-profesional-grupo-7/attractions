@@ -31,10 +31,12 @@ def get_attraction(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "id,displayName",
+        "X-Goog-FieldMask": "id,addressComponents,adrFormatAddress,formattedAddress,location,plusCode,shortFormattedAddress,types,viewport,accessibilityOptions,businessStatus,displayName,googleMapsUri,iconBackgroundColor,iconMaskBaseUri,primaryType,primaryTypeDisplayName,subDestinations,utcOffsetMinutes,currentOpeningHours,currentSecondaryOpeningHours,internationalPhoneNumber,nationalPhoneNumber,priceLevel,rating,regularOpeningHours,regularSecondaryOpeningHours,userRatingCount,websiteUri,allowsDogs,curbsidePickup,delivery,dineIn,editorialSummary,evChargeOptions,fuelOptions,goodForChildren,goodForGroups,goodForWatchingSports,liveMusic,menuForChildren,parkingOptions,paymentOptions,outdoorSeating,reservable,restroom,reviews,servesBeer,servesBreakfast,servesBrunch,servesCocktails,servesCoffee,servesDinner,servesLunch,servesVegetarianFood,servesWine,takeout,photos",
     }
 
     response = requests.get(url, headers=headers)
+    print(response.text)
+    print(response.content)
 
     if response.status_code != 200:
         raise HTTPException(
@@ -505,26 +507,34 @@ def update_comment(
 
 
 @router.post(
-    "/attractions/scheduled",
+    "/attractions/schedule",
     status_code=201,
     tags=["Schedule Attraction"],
     description="Schedules an attraction for a user at a certain timestamp",
 )
 def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
-    scheduled = crud.get_scheduled_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
-    )
-
-    if not scheduled:
-        return crud.schedule_attraction(
-            db=db,
-            user_id=data.user_id,
-            attraction_id=data.attraction_id,
-            scheduled_time=data.scheduled_time,
+    if not crud.check_if_schedule_is_valid(
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
+        day=data.day,
+    ):
+        Logger().info(
+            "Attraction has already been scheduled by user for specified date"
+        )
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Attraction has already been scheduled by user for specified date",
+            },
         )
 
-    return crud.update_scheduled_attraction(
-        db=db, scheduled_to_update=scheduled, new_scheduled_time=data.scheduled_time
+    return crud.schedule_attraction(
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
+        day=data.day,
     )
 
 
@@ -535,8 +545,8 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
     description="Unschedules an attraction for a user",
 )
 def unschedule_attraction(data: schemas.UnscheduleAttraction, db=Depends(get_db)):
-    scheduled_attraction = crud.get_scheduled_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+    scheduled_attraction = crud.get_scheduled_attraction_by_id(
+        db=db, schedule_id=data.schedule_id
     )
     if not scheduled_attraction:
         Logger().info("Attraction has not been scheduled by user")
@@ -564,4 +574,29 @@ def get_scheduled_attractions_list(
 ):
     return crud.get_scheduled_attractions_list(
         db=db, user_id=user_id, page=page, size=size
+    )
+
+
+@router.put(
+    "/attractions/schedule",
+    status_code=201,
+    tags=["Schedule Attraction"],
+    description="Edits a scheduled attraction by schedule_id",
+)
+def update_schedule(
+    data: schemas.UpdateSchedule,
+    db=Depends(get_db),
+):
+    scheduled_attraction = crud.get_scheduled_attraction_by_id(
+        db=db, schedule_id=data.schedule_id
+    )
+    if not scheduled_attraction:
+        Logger().info("Scheduled attraction not found")
+        raise HTTPException(
+            status_code=404, detail={"status": "error", "message": "Comment not found"}
+        )
+    return crud.update_scheduled_attraction(
+        db=db,
+        scheduled_to_update=scheduled_attraction,
+        new_day=data.new_day,
     )

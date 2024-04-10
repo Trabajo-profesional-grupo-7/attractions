@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -47,9 +47,13 @@ class SearchAttractionsByText(BaseModel):
 class ScheduleAttraction(BaseModel):
     user_id: int
     attraction_id: str
-    scheduled_time: datetime
+    day: date
 
 
 class UnscheduleAttraction(BaseModel):
-    user_id: int
-    attraction_id: str
+    schedule_id: int
+
+
+class UpdateSchedule(BaseModel):
+    schedule_id: int
+    new_day: date
