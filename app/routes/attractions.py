@@ -1,4 +1,5 @@
 import os
+from typing import List, Optional
 
 import boto3
 import requests
@@ -31,12 +32,10 @@ def get_attraction(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "id,addressComponents,adrFormatAddress,formattedAddress,location,plusCode,shortFormattedAddress,types,viewport,accessibilityOptions,businessStatus,displayName,googleMapsUri,iconBackgroundColor,iconMaskBaseUri,primaryType,primaryTypeDisplayName,subDestinations,utcOffsetMinutes,currentOpeningHours,currentSecondaryOpeningHours,internationalPhoneNumber,nationalPhoneNumber,priceLevel,rating,regularOpeningHours,regularSecondaryOpeningHours,userRatingCount,websiteUri,allowsDogs,curbsidePickup,delivery,dineIn,editorialSummary,evChargeOptions,fuelOptions,goodForChildren,goodForGroups,goodForWatchingSports,liveMusic,menuForChildren,parkingOptions,paymentOptions,outdoorSeating,reservable,restroom,reviews,servesBeer,servesBreakfast,servesBrunch,servesCocktails,servesCoffee,servesDinner,servesLunch,servesVegetarianFood,servesWine,takeout,photos",
+        "X-Goog-FieldMask": "displayName,id,addressComponents,photos",
     }
 
     response = requests.get(url, headers=headers)
-    print(response.text)
-    print(response.content)
 
     if response.status_code != 200:
         raise HTTPException(
@@ -47,32 +46,16 @@ def get_attraction(
             },
         )
 
-    attraction = crud.get_attraction(db=db, attraction_id=attraction_id)
     response = response.json()
-    if not attraction:
-        response["likes_count"] = 0
-        response["saved_count"] = 0
-        response["done_count"] = 0
-        response["avg_rating"] = None
 
-    else:
-        response["likes_count"] = attraction.likes_count
-        response["saved_count"] = attraction.saved_count
-        response["done_count"] = attraction.done_count
-
-        if attraction.rating_count > 0:
-            response["avg_rating"] = attraction.rating_total / attraction.rating_count
-        else:
-            response["avg_rating"] = None
-
-    return response
+    return crud.format_attraction(db=db, attraction=response)
 
 
 @router.post(
     "/attractions/nearby/{latitude}/{longitude}/{radius}",
     status_code=201,
     tags=["Get Attractions"],
-    description="Gets nearby attractions given a latitude and longitude",
+    description="Gets nearby attractions given a latitude and longitude. Can filter by a list of attraction types.",
 )
 def get_nearby_attractions(
     latitude: float = Path(
@@ -82,6 +65,11 @@ def get_nearby_attractions(
         ..., title="Longitude", description="Center longitude for search"
     ),
     radius: float = Path(..., title="Radius", description="Search radius in meters"),
+    attraction_types: List[str] = Query(
+        None,
+        title="Attraction Types",
+        description="Filter by attraction types",
+    ),
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchNearby"
@@ -89,11 +77,11 @@ def get_nearby_attractions(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos",
     }
 
     data = {
-        "includedTypes": ["historical_landmark", "tourist_attraction"],
+        "includedTypes": attraction_types,
         "maxResultCount": 10,
         "locationRestriction": {
             "circle": {
@@ -114,47 +102,39 @@ def get_nearby_attractions(
             },
         )
 
-    response = response.json()
-    if len(response) > 0:
-        for place in response["places"]:
-            attraction = crud.get_attraction(db=db, attraction_id=place["id"])
-            if not attraction:
-                place["likes_count"] = 0
-                place["saved_count"] = 0
-                place["done_count"] = 0
-                place["avg_rating"] = None
+    formatted_response = []
 
-            else:
-                place["likes_count"] = attraction.likes_count
-                place["saved_count"] = attraction.saved_count
-                place["done_count"] = attraction.done_count
+    if "places" in response.json().keys():
+        for attraction in response.json()["places"]:
+            formatted_response.append(
+                crud.format_attraction(db=db, attraction=attraction)
+            )
 
-                if attraction.rating_count > 0:
-                    place["avg_rating"] = (
-                        attraction.rating_total / attraction.rating_count
-                    )
-                else:
-                    place["avg_rating"] = None
-
-    return response
+    return formatted_response
 
 
 @router.post(
     "/attractions/search",
     status_code=201,
     tags=["Get Attractions"],
-    description="Searches attractions given a text query",
+    description="Searches attractions given a text query. Can filter by a certain attraction type.",
 )
-def search_attractions(data: schemas.SearchAttractionsByText, db=Depends(get_db)):
+def search_attractions(
+    data: schemas.SearchAttractionsByText,
+    type: Optional[str] = None,
+    db=Depends(get_db),
+):
     url = "https://places.googleapis.com/v1/places:searchText"
 
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.adrFormatAddress",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos",
     }
 
-    response = requests.post(url, json={"textQuery": data.query}, headers=headers)
+    response = requests.post(
+        url, json={"textQuery": data.query, "includedType": type}, headers=headers
+    )
 
     if response.status_code != 200:
         raise HTTPException(
@@ -167,26 +147,15 @@ def search_attractions(data: schemas.SearchAttractionsByText, db=Depends(get_db)
 
     crud.add_search(db=db, user_id=data.user_id, query=data.query)
 
-    response = response.json()
-    for place in response["places"]:
-        attraction = crud.get_attraction(db=db, attraction_id=place["id"])
-        if not attraction:
-            place["likes_count"] = 0
-            place["saved_count"] = 0
-            place["done_count"] = 0
-            place["avg_rating"] = None
+    formatted_response = []
 
-        else:
-            place["likes_count"] = attraction.likes_count
-            place["saved_count"] = attraction.saved_count
-            place["done_count"] = attraction.done_count
+    if "places" in response.json().keys():
+        for attraction in response.json()["places"]:
+            formatted_response.append(
+                crud.format_attraction(db=db, attraction=attraction)
+            )
 
-            if attraction.rating_count > 0:
-                place["avg_rating"] = attraction.rating_total / attraction.rating_count
-            else:
-                place["avg_rating"] = None
-
-    return response
+    return formatted_response
 
 
 @router.get(

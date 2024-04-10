@@ -8,6 +8,44 @@ from . import models
 # ATTRACTIONS
 
 
+def format_attraction(db: Session, attraction):
+    formatted_attraction = {}
+    formatted_attraction["attraction_id"] = attraction["id"]
+    formatted_attraction["attraction_name"] = attraction["displayName"]["text"]
+
+    for element in attraction["addressComponents"]:
+        if "locality" in element["types"]:
+            formatted_attraction["city"] = element["longText"]
+        elif "country" in element["types"]:
+            formatted_attraction["country"] = element["longText"]
+
+    if attraction["photos"]:
+        formatted_attraction["photos"] = attraction["photos"]
+    else:
+        formatted_attraction["photos"] = []
+
+    attraction = get_attraction(db=db, attraction_id=attraction["id"])
+    if not attraction:
+        formatted_attraction["likes_count"] = 0
+        formatted_attraction["saved_count"] = 0
+        formatted_attraction["done_count"] = 0
+        formatted_attraction["avg_rating"] = None
+
+    else:
+        formatted_attraction["likes_count"] = attraction.likes_count
+        formatted_attraction["saved_count"] = attraction.saved_count
+        formatted_attraction["done_count"] = attraction.done_count
+
+        if attraction.rating_count > 0:
+            formatted_attraction["avg_rating"] = (
+                attraction.rating_total / attraction.rating_count
+            )
+        else:
+            formatted_attraction["avg_rating"] = None
+
+    return formatted_attraction
+
+
 def get_attraction(db: Session, attraction_id: str):
     return (
         db.query(models.Attractions)
