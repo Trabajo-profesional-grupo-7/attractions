@@ -29,12 +29,14 @@ def format_attraction(db: Session, attraction):
         formatted_attraction["likes_count"] = 0
         formatted_attraction["saved_count"] = 0
         formatted_attraction["done_count"] = 0
+        formatted_attraction["scheduled_count"] = 0
         formatted_attraction["avg_rating"] = None
 
     else:
         formatted_attraction["likes_count"] = attraction.likes_count
         formatted_attraction["saved_count"] = attraction.saved_count
         formatted_attraction["done_count"] = attraction.done_count
+        formatted_attraction["scheduled_count"] = attraction.scheduled_count
 
         if attraction.rating_count > 0:
             formatted_attraction["avg_rating"] = (
