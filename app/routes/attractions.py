@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import List, Optional
 
@@ -655,6 +656,16 @@ def update_comment(
     description="Schedules an attraction for a user at a certain timestamp",
 )
 def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
+    if data.day < datetime.date.today():
+        Logger().info("Cannot schedule an attraction for a date before today")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Cannot schedule an attraction for a date before today",
+            },
+        )
+
     if not crud.check_if_schedule_is_valid(
         db=db,
         user_id=data.user_id,
