@@ -5,7 +5,7 @@ import boto3
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from app.db import crud, schemas
+from app.db import crud, recommendations, schemas
 from app.db.database import get_db
 from app.services.logger import Logger
 
@@ -134,6 +134,7 @@ def get_attraction(
     attraction_id: str = Path(
         ..., title="Attraction ID", description="The ID of the attraction to get"
     ),
+    user_id: Optional[str] = None,
     db=Depends(get_db),
 ):
     url = f"https://places.googleapis.com/v1/places/{attraction_id}"
@@ -157,7 +158,7 @@ def get_attraction(
 
     response = response.json()
 
-    return crud.format_attraction(db=db, attraction=response)
+    return crud.format_attraction(db=db, attraction=response, user_id=user_id)
 
 
 @router.post(
@@ -179,6 +180,7 @@ def get_nearby_attractions(
         title="Attraction Types",
         description="Filter by attraction types",
     ),
+    user_id: Optional[str] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchNearby"
@@ -216,7 +218,7 @@ def get_nearby_attractions(
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
             formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction)
+                crud.format_attraction(db=db, attraction=attraction, user_id=user_id)
             )
 
     return formatted_response
@@ -231,6 +233,7 @@ def get_nearby_attractions(
 def search_attractions(
     data: schemas.SearchAttractionsByText,
     type: Optional[str] = None,
+    user_id: Optional[str] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
@@ -261,7 +264,7 @@ def search_attractions(
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
             formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction)
+                crud.format_attraction(db=db, attraction=attraction, user_id=user_id)
             )
 
     return formatted_response
@@ -357,6 +360,16 @@ def get_attraction_recommendations(
         )
 
     return recommendations["similar_attractions"][page * size : (page + 1) * size]
+
+
+@router.post(
+    "/attractions/run-recommendation-system",
+    status_code=201,
+    tags=["Get Attractions"],
+    description="Runs the recommendation system",
+)
+def run_recommendation_system(db=Depends(get_db)):
+    recommendations.run_recommendation_system(db=db)
 
 
 # SAVE

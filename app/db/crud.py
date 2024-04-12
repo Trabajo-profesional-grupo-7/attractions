@@ -8,7 +8,7 @@ from . import models
 # ATTRACTIONS
 
 
-def format_attraction(db: Session, attraction):
+def format_attraction(db: Session, attraction, user_id):
     formatted_attraction = {}
     formatted_attraction["attraction_id"] = attraction["id"]
     formatted_attraction["attraction_name"] = attraction["displayName"]["text"]
@@ -19,10 +19,74 @@ def format_attraction(db: Session, attraction):
         elif "country" in element["types"]:
             formatted_attraction["country"] = element["longText"]
 
-    if attraction["photos"]:
+    if "photos" in attraction.keys():
         formatted_attraction["photos"] = attraction["photos"]
     else:
         formatted_attraction["photos"] = []
+
+    if user_id:
+
+        if (
+            db.query(models.Likes)
+            .filter(
+                models.Likes.attraction_id == attraction["id"],
+                models.Likes.user_id == user_id,
+            )
+            .first()
+        ):
+            formatted_attraction["liked_by_user"] = True
+        else:
+            formatted_attraction["liked_by_user"] = False
+
+        if (
+            db.query(models.Done)
+            .filter(
+                models.Done.attraction_id == attraction["id"],
+                models.Done.user_id == user_id,
+            )
+            .first()
+        ):
+            formatted_attraction["done_by_user"] = True
+        else:
+            formatted_attraction["done_by_user"] = False
+
+        if (
+            db.query(models.Scheduled)
+            .filter(
+                models.Scheduled.attraction_id == attraction["id"],
+                models.Scheduled.user_id == user_id,
+            )
+            .first()
+        ):
+            formatted_attraction["scheduled_by_user"] = True
+        else:
+            formatted_attraction["scheduled_by_user"] = False
+
+        if (
+            db.query(models.Saved)
+            .filter(
+                models.Saved.attraction_id == attraction["id"],
+                models.Saved.user_id == user_id,
+            )
+            .first()
+        ):
+            formatted_attraction["saved_by_user"] = True
+        else:
+            formatted_attraction["saved_by_user"] = False
+
+        user_rating = (
+            db.query(models.Ratings)
+            .filter(
+                models.Ratings.attraction_id == attraction["id"],
+                models.Ratings.user_id == user_id,
+            )
+            .first()
+        )
+
+        if user_rating:
+            formatted_attraction["user_rating"] = user_rating.rating
+        else:
+            formatted_attraction["user_rating"] = None
 
     attraction = get_attraction(db=db, attraction_id=attraction["id"])
     if not attraction:

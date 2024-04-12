@@ -8,3 +8,5 @@ pytest==8.0.0
 httpx==0.26.0
 pytest-mock==3.12.0
 boto3==1.34.73
+pandas==2.2.2
+scikit-learn==1.4.2
