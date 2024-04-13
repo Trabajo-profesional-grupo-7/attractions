@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.get(
     "/metadata",
-    status_code=201,
+    status_code=200,
     tags=["Metadata"],
     description="Gets the application metadata",
 )
@@ -135,7 +135,7 @@ def get_attraction(
     attraction_id: str = Path(
         ..., title="Attraction ID", description="The ID of the attraction to get"
     ),
-    user_id: Optional[str] = None,
+    user_id: Optional[int] = None,
     db=Depends(get_db),
 ):
     url = f"https://places.googleapis.com/v1/places/{attraction_id}"
@@ -181,7 +181,7 @@ def get_nearby_attractions(
         title="Attraction Types",
         description="Filter by attraction types",
     ),
-    user_id: Optional[str] = None,
+    user_id: Optional[int] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchNearby"
@@ -234,7 +234,7 @@ def get_nearby_attractions(
 def search_attractions(
     data: schemas.SearchAttractionsByText,
     type: Optional[str] = None,
-    user_id: Optional[str] = None,
+    user_id: Optional[int] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
@@ -258,7 +258,8 @@ def search_attractions(
             },
         )
 
-    crud.add_search(db=db, user_id=data.user_id, query=data.query)
+    if user_id:
+        crud.add_search(db=db, query=data.query, user_id=user_id)
 
     formatted_response = []
 

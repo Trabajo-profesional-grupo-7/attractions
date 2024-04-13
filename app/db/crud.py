@@ -428,7 +428,7 @@ def delete_comment(db: Session, comment_to_delete: models.Comments):
 # SEARCH
 
 
-def add_search(db: Session, user_id: int, query: str):
+def add_search(db: Session, query: str, user_id: int):
     new_record = models.Searches(user_id=user_id, query=query)
     db.add(new_record)
     db.commit()

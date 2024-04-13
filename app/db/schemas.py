@@ -40,7 +40,6 @@ class UpdateComment(BaseModel):
 
 
 class SearchAttractionsByText(BaseModel):
-    user_id: int
     query: str
 
 
