@@ -328,6 +328,7 @@ def get_feed(
     user_id: int = Path(..., title="User ID", description="The ID of the user"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
+    db=Depends(get_db),
 ):
 
     session = boto3.Session(
@@ -354,7 +355,35 @@ def get_feed(
             },
         )
 
-    return recommendations["attraction_ids"][page * size : (page + 1) * size]
+    recommendations = recommendations["attraction_ids"][page * size : (page + 1) * size]
+
+    formatted_response = []
+
+    for attraction_id in recommendations:
+
+        url = f"https://places.googleapis.com/v1/places/{attraction_id}"
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
+            "X-Goog-FieldMask": "displayName,id,addressComponents,photos",
+        }
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "status": "error",
+                    "message": f"External API error: {response.status_code}",
+                },
+            )
+
+        response = response.json()
+        formatted_response.append(crud.format_attraction(db=db, attraction=response))
+
+    return formatted_response
 
 
 @router.post(
