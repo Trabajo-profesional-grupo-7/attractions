@@ -1,28 +1,67 @@
 import datetime
+import os
 from datetime import date
 
 from sqlalchemy.orm import Session
+
+from app.db import schemas
 
 from . import models
 
 # ATTRACTIONS
 
 
-def format_attraction(db: Session, attraction, user_id):
-    formatted_attraction = {}
-    formatted_attraction["attraction_id"] = attraction["id"]
-    formatted_attraction["attraction_name"] = attraction["displayName"]["text"]
+def format_attraction(db: Session, attraction):
+    formatted_attraction = schemas.Attraction(
+        attraction_id=attraction["id"],
+        attraction_name=attraction["displayName"]["text"],
+    )
 
     for element in attraction["addressComponents"]:
         if "locality" in element["types"]:
-            formatted_attraction["city"] = element["longText"]
+            formatted_attraction.city = element["longText"]
         elif "country" in element["types"]:
-            formatted_attraction["country"] = element["longText"]
+            formatted_attraction.country = element["longText"]
 
     if "photos" in attraction.keys():
-        formatted_attraction["photos"] = attraction["photos"]
-    else:
-        formatted_attraction["photos"] = []
+        photo_url = attraction["photos"][0]["name"]
+        url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
+        formatted_attraction.photo = url
+
+    return formatted_attraction
+
+
+def format_attraction_by_user(db: Session, attraction, user_id):
+    formatted_attraction = schemas.AttractionByUser(
+        attraction_id=attraction["id"],
+        attraction_name=attraction["displayName"]["text"],
+    )
+
+    for element in attraction["addressComponents"]:
+        if "locality" in element["types"]:
+            formatted_attraction.city = element["longText"]
+        elif "country" in element["types"]:
+            formatted_attraction.country = element["longText"]
+
+    if "photos" in attraction.keys():
+        photo_url = attraction["photos"][0]["name"]
+        url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
+        formatted_attraction.photo = url
+
+    comments = (
+        db.query(models.Comments)
+        .filter(models.Comments.attraction_id == attraction["id"])
+        .all()
+    )
+    if comments:
+        for comment in comments:
+            formatted_attraction.comments.append(
+                schemas.Comment(
+                    comment_id=comment.comment_id,
+                    user_id=comment.user_id,
+                    comment=comment.comment,
+                )
+            )
 
     if user_id:
 
@@ -34,9 +73,7 @@ def format_attraction(db: Session, attraction, user_id):
             )
             .first()
         ):
-            formatted_attraction["liked_by_user"] = True
-        else:
-            formatted_attraction["liked_by_user"] = False
+            formatted_attraction.is_liked = True
 
         if (
             db.query(models.Done)
@@ -46,21 +83,7 @@ def format_attraction(db: Session, attraction, user_id):
             )
             .first()
         ):
-            formatted_attraction["done_by_user"] = True
-        else:
-            formatted_attraction["done_by_user"] = False
-
-        if (
-            db.query(models.Scheduled)
-            .filter(
-                models.Scheduled.attraction_id == attraction["id"],
-                models.Scheduled.user_id == user_id,
-            )
-            .first()
-        ):
-            formatted_attraction["scheduled_by_user"] = True
-        else:
-            formatted_attraction["scheduled_by_user"] = False
+            formatted_attraction.is_done = True
 
         if (
             db.query(models.Saved)
@@ -70,9 +93,7 @@ def format_attraction(db: Session, attraction, user_id):
             )
             .first()
         ):
-            formatted_attraction["saved_by_user"] = True
-        else:
-            formatted_attraction["saved_by_user"] = False
+            formatted_attraction.is_saved = True
 
         user_rating = (
             db.query(models.Ratings)
@@ -84,30 +105,16 @@ def format_attraction(db: Session, attraction, user_id):
         )
 
         if user_rating:
-            formatted_attraction["user_rating"] = user_rating.rating
-        else:
-            formatted_attraction["user_rating"] = None
+            formatted_attraction.user_rating = user_rating.rating
 
     attraction = get_attraction(db=db, attraction_id=attraction["id"])
-    if not attraction:
-        formatted_attraction["likes_count"] = 0
-        formatted_attraction["saved_count"] = 0
-        formatted_attraction["done_count"] = 0
-        formatted_attraction["scheduled_count"] = 0
-        formatted_attraction["avg_rating"] = None
-
-    else:
-        formatted_attraction["likes_count"] = attraction.likes_count
-        formatted_attraction["saved_count"] = attraction.saved_count
-        formatted_attraction["done_count"] = attraction.done_count
-        formatted_attraction["scheduled_count"] = attraction.scheduled_count
+    if attraction:
+        formatted_attraction.liked_count = attraction.likes_count
 
         if attraction.rating_count > 0:
-            formatted_attraction["avg_rating"] = (
+            formatted_attraction.avg_rating = (
                 attraction.rating_total / attraction.rating_count
             )
-        else:
-            formatted_attraction["avg_rating"] = None
 
     return formatted_attraction
 

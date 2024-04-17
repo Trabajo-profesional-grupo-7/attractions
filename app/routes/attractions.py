@@ -127,9 +127,9 @@ def get_metadata():
 
 @router.get(
     "/attractions/byid/{attraction_id}",
-    status_code=201,
+    status_code=200,
     tags=["Get Attractions"],
-    description="Gets an attraction given its ID",
+    description="Gets an attraction given its ID. Can optionally send user ID to get additional information.",
 )
 def get_attraction(
     attraction_id: str = Path(
@@ -159,14 +159,14 @@ def get_attraction(
 
     response = response.json()
 
-    return crud.format_attraction(db=db, attraction=response, user_id=user_id)
+    return crud.format_attraction_by_user(db=db, attraction=response, user_id=user_id)
 
 
 @router.post(
     "/attractions/nearby/{latitude}/{longitude}/{radius}",
     status_code=201,
     tags=["Get Attractions"],
-    description="Gets nearby attractions given a latitude and longitude. Can filter by a list of attraction types.",
+    description="Gets nearby attractions given a latitude, longitude and radius. Can optionally filter by a list of attraction types.",
 )
 def get_nearby_attractions(
     latitude: float = Path(
@@ -181,7 +181,6 @@ def get_nearby_attractions(
         title="Attraction Types",
         description="Filter by attraction types",
     ),
-    user_id: Optional[int] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchNearby"
@@ -219,7 +218,7 @@ def get_nearby_attractions(
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
             formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction, user_id=user_id)
+                crud.format_attraction(db=db, attraction=attraction)
             )
 
     return formatted_response
@@ -229,12 +228,11 @@ def get_nearby_attractions(
     "/attractions/search",
     status_code=201,
     tags=["Get Attractions"],
-    description="Searches attractions given a text query. Can filter by a certain attraction type.",
+    description="Searches attractions given a text query. Can optionally filter by a certain attraction type.",
 )
 def search_attractions(
     data: schemas.SearchAttractionsByText,
     type: Optional[str] = None,
-    user_id: Optional[int] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
@@ -258,15 +256,12 @@ def search_attractions(
             },
         )
 
-    if user_id:
-        crud.add_search(db=db, query=data.query, user_id=user_id)
-
     formatted_response = []
 
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
             formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction, user_id=user_id)
+                crud.format_attraction(db=db, attraction=attraction)
             )
 
     return formatted_response
@@ -276,7 +271,7 @@ def search_attractions(
     "/attractions/autocomplete",
     status_code=201,
     tags=["Get Attractions"],
-    description="Returns attractions predictions given a substring. Can filter by a list of attraction types.",
+    description="Returns attractions predictions given a substring. Can optionally filter by a list of attraction types.",
 )
 def autocomplete_attractions(
     data: schemas.AutocompleteAttractions,
@@ -324,8 +319,8 @@ def autocomplete_attractions(
 
 
 @router.get(
-    "/attractions/feed/{user_id}",
-    status_code=201,
+    "/attractions/recommendations/{user_id}",
+    status_code=200,
     tags=["Get Attractions"],
     description="Gets recommended attractions for a given user ID",
 )

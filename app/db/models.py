@@ -42,13 +42,13 @@ class Comments(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class Searches(Base):
-    __tablename__ = "searches"
+# class Searches(Base):
+#     __tablename__ = "searches"
 
-    search_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer)
-    query = Column(String)
-    searched_at = Column(DateTime, default=datetime.datetime.utcnow)
+#     search_id = Column(Integer, primary_key=True, autoincrement=True)
+#     user_id = Column(Integer)
+#     query = Column(String)
+#     searched_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class Likes(Base):
