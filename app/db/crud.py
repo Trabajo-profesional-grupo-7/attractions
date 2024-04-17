@@ -253,16 +253,6 @@ def unlike_attraction(db: Session, attraction_to_unlike: models.Likes):
     db.refresh(attraction)
 
 
-def get_liked_attractions_list(db: Session, user_id: int, page: int, size: int):
-    return (
-        db.query(models.Likes)
-        .filter(models.Likes.user_id == user_id)
-        .offset(page)
-        .limit(size)
-        .all()
-    )
-
-
 # DONE
 
 
