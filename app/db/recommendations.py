@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from . import models
 
 # Cantidad de atracciones que se quieren recomendar
-N_RECOMMENDATIONS = 2
+N_RECOMMENDATIONS = 20
 
 # Valor para rellenar a los nulos
 # Un nulo sucede cuando un usuario no calificó una atracción
@@ -30,8 +30,8 @@ def run_recommendation_system(db: Session):
     print("df:")
     print(df)
 
-    # Matriz atracciones-usuarios
-    matrix = df.pivot(index="attraction_id", columns="user_id", values="rating")
+    # Matriz usuarios-atracciones
+    matrix = df.pivot(index="user_id", columns="attraction_id", values="rating")
 
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
@@ -45,37 +45,40 @@ def run_recommendation_system(db: Session):
 
     dynamodb = session.resource("dynamodb", region_name="us-east-2")
 
-    table_name = "attractions"
+    table_name = "recommendations"
     table = dynamodb.Table(table_name)
 
-    # Se realiza el cálculo para cada atracción
-    for attraction_id in df["attraction_id"].unique():
+    user_similarity = cosine_similarity(matrix)
 
-        print(f"Se calcula para {attraction_id}")
+    print(user_similarity)
 
-        # Se calcula la similaridad coseno de la atracción con todas las otras atracciones
-        # Se obtiene un vector con las similitudes cosenos
-        user_similarity = cosine_similarity([matrix.loc[attraction_id]], matrix)[0]
-        print("\nUser similarity:")
-        print(user_similarity)
+    for i, user_id in enumerate(matrix.index):
 
-        # Se obtienen las posiciones de las atracciones más cercanas
+        print(f"Se calcula para {user_id}")
+
+        # Se obtienen las posiciones de los usuarios más cercanos
         # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
-        positions = n_greatest_positions(user_similarity, N_RECOMMENDATIONS + 1)
+        positions = n_greatest_positions(user_similarity[i], N_RECOMMENDATIONS + 1)
         print("\nPositions:")
         print(positions)
 
-        # Se filtra a la matriz dejando solamente a los usuarios cercanos
+        # se filtra a la matriz dejando solamente a los usuarios cercanos
         filtered_matrix = matrix.iloc[positions]
-        if attraction_id in filtered_matrix.index:
-            filtered_matrix = filtered_matrix.drop(attraction_id, axis=0)
-        recomendations = filtered_matrix.index.tolist()
+        if user_id in filtered_matrix.index:
+            filtered_matrix = filtered_matrix.drop(user_id, axis=0)
+
+        print("\nMatriz filtrada:")
+        print(filtered_matrix)
+
+        recomendations = (
+            filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
+        )
         print("\nRecomendaciones:")
         print(recomendations)
 
         item_data = {
-            "attraction_id": attraction_id,
-            "similar_attractions": recomendations,
+            "user_id": user_id,
+            "attraction_ids": recomendations,
         }
 
         table.put_item(Item=item_data)

@@ -324,15 +324,13 @@ def autocomplete_attractions(
 
 
 @router.get(
-    "/attractions/recommendations/{attraction_id}",
+    "/attractions/feed/{user_id}",
     status_code=201,
     tags=["Get Attractions"],
-    description="Gets similar attractions given an attraction ID",
+    description="Gets recommended attractions for a given user ID",
 )
-def get_attraction_recommendations(
-    attraction_id: str = Path(
-        ..., title="Attraction ID", description="The ID of the attraction"
-    ),
+def get_feed(
+    user_id: int = Path(..., title="User ID", description="The ID of the user"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
 ):
@@ -344,24 +342,24 @@ def get_attraction_recommendations(
 
     dynamodb = session.resource("dynamodb", region_name="us-east-2")
 
-    table_name = "attractions"
+    table_name = "recommendations"
     table = dynamodb.Table(table_name)
 
-    key = {"attraction_id": attraction_id}
+    key = {"user_id": user_id}
     response = table.get_item(Key=key)
     recommendations = response.get("Item")
 
     if not recommendations:
-        Logger().info("No similar attractions were found")
+        Logger().info("No attractions were found")
         raise HTTPException(
             status_code=404,
             detail={
                 "status": "error",
-                "message": "No similar attractions were found",
+                "message": "No attractions were found",
             },
         )
 
-    return recommendations["similar_attractions"][page * size : (page + 1) * size]
+    return recommendations["attraction_ids"][page * size : (page + 1) * size]
 
 
 @router.post(
