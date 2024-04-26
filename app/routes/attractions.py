@@ -231,9 +231,7 @@ def get_nearby_attractions(
     description="Searches attractions given a text query. Can optionally filter by a certain attraction type.",
 )
 def search_attractions(
-    data: schemas.SearchAttractionsByText,
-    type: Optional[str] = None,
-    db=Depends(get_db),
+    data: schemas.SearchAttractionsByText, type: Optional[str] = None
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
 
@@ -260,11 +258,37 @@ def search_attractions(
 
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
-            formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction)
-            )
+            formatted_response.append(crud.format_attraction(attraction=attraction))
 
     return formatted_response
+
+
+@router.get(
+    "/attractions/location",
+    status_code=200,
+    tags=["Get attractions location"],
+)
+def get_attraction_location(text: str):
+    url = "https://places.googleapis.com/v1/places:searchText"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
+        "X-Goog-FieldMask": "places.location",
+    }
+
+    response = requests.post(url, json={"textQuery": text}, headers=headers)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": f"External API error: {response.status_code}",
+            },
+        )
+
+    return response.json()
 
 
 @router.post(

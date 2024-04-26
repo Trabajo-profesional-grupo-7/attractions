@@ -11,7 +11,7 @@ from . import models
 # ATTRACTIONS
 
 
-def format_attraction(db: Session, attraction):
+def format_attraction(attraction):
     formatted_attraction = schemas.Attraction(
         attraction_id=attraction["id"],
         attraction_name=attraction["displayName"]["text"],
