@@ -235,6 +235,8 @@ def get_nearby_attractions(
 def search_attractions(
     data: schemas.SearchAttractionsByText,
     type: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
     db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
@@ -245,11 +247,28 @@ def search_attractions(
         "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location",
     }
 
-    response = requests.post(
-        url, json={"textQuery": data.query, "includedType": type}, headers=headers
-    )
+    if latitude and longitude:
+        response = requests.post(
+            url,
+            json={
+                "textQuery": data.query,
+                "includedType": type,
+                "locationBias   ": {
+                    "circle": {
+                        "center": {"latitude": latitude, "longitude": longitude},
+                        "radius": 500.0,
+                    }
+                },
+            },
+            headers=headers,
+        )
+    else:
+        response = requests.post(
+            url, json={"textQuery": data.query, "includedType": type}, headers=headers
+        )
 
     if response.status_code != 200:
+        print(response.content)
         raise HTTPException(
             status_code=404,
             detail={
