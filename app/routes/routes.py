@@ -11,8 +11,7 @@ from app.db import crud, models
 from app.db.database import get_db
 from app.routes import schemas
 from app.services import attractions_service, mappers, recommendations
-from app.services.constants import (ATTRACTION_TYPES,
-                                    MINIMUM_NUMBER_OF_INTERACTIONS)
+from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_INTERACTIONS
 from app.services.logger import Logger
 
 router = APIRouter()
