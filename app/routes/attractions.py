@@ -217,9 +217,7 @@ def get_nearby_attractions(
 
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
-            formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction)
-            )
+            formatted_response.append(crud.format_attraction(attraction=attraction))
 
     return formatted_response
 
@@ -405,7 +403,7 @@ def get_feed(
             )
 
         response = response.json()
-        formatted_response.append(crud.format_attraction(db=db, attraction=response))
+        formatted_response.append(crud.format_attraction(attraction=response))
 
     return formatted_response
 
