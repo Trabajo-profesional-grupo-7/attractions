@@ -69,11 +69,17 @@ class Comment(BaseModel):
     comment: str
 
 
+class Location(BaseModel):
+    latitude: float
+    longitude: float
+
+
 class AttractionByUser(BaseModel):
     attraction_id: str
     attraction_name: str
     city: str = None
     country: str = None
+    location: Location = None
     photo: str = None
     comments: List[Comment] = []
     avg_rating: float = None
@@ -89,4 +95,5 @@ class Attraction(BaseModel):
     attraction_name: str
     city: str = None
     country: str = None
+    location: Location = None
     photo: str = None

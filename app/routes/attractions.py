@@ -143,7 +143,7 @@ def get_attraction(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "displayName,id,addressComponents,photos",
+        "X-Goog-FieldMask": "displayName,id,addressComponents,photos,location",
     }
 
     response = requests.get(url, headers=headers)
@@ -190,7 +190,7 @@ def get_nearby_attractions(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location",
     }
 
     data = {
@@ -238,7 +238,7 @@ def search_attractions(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location",
     }
 
     response = requests.post(
@@ -390,7 +390,7 @@ def get_feed(
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-            "X-Goog-FieldMask": "displayName,id,addressComponents,photos",
+            "X-Goog-FieldMask": "displayName,id,addressComponents,photos,location",
         }
 
         response = requests.get(url, headers=headers)

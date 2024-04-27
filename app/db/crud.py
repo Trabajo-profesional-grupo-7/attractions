@@ -17,6 +17,11 @@ def format_attraction(attraction):
         attraction_name=attraction["displayName"]["text"],
     )
 
+    formatted_attraction.location = schemas.Location(
+        latitude=attraction["location"]["latitude"],
+        longitude=attraction["location"]["longitude"],
+    )
+
     for element in attraction["addressComponents"]:
         if "locality" in element["types"]:
             formatted_attraction.city = element["longText"]
@@ -35,6 +40,11 @@ def format_attraction_by_user(db: Session, attraction, user_id):
     formatted_attraction = schemas.AttractionByUser(
         attraction_id=attraction["id"],
         attraction_name=attraction["displayName"]["text"],
+    )
+
+    formatted_attraction.location = schemas.Location(
+        latitude=attraction["location"]["latitude"],
+        longitude=attraction["location"]["longitude"],
     )
 
     for element in attraction["addressComponents"]:
