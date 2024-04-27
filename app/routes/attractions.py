@@ -175,7 +175,9 @@ def get_nearby_attractions(
     longitude: float = Path(
         ..., title="Longitude", description="Center longitude for search"
     ),
-    radius: float = Path(..., title="Radius", description="Search radius in meters"),
+    radius: float = Path(
+        ..., title="Radius", description="Search radius in meters", le=50000
+    ),
     attraction_types: List[str] = Query(
         None,
         title="Attraction Types",
