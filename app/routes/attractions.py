@@ -219,9 +219,11 @@ def get_nearby_attractions(
 
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
-            formatted_response.append(crud.format_attraction(attraction=attraction))
+            formatted_response.append(
+                crud.format_attraction(db=db, attraction=attraction)
+            )
 
-    return formatted_response
+    return crud.sort_attractions_by_rating(formatted_response)
 
 
 @router.post(
@@ -231,7 +233,9 @@ def get_nearby_attractions(
     description="Searches attractions given a text query. Can optionally filter by a certain attraction type.",
 )
 def search_attractions(
-    data: schemas.SearchAttractionsByText, type: Optional[str] = None
+    data: schemas.SearchAttractionsByText,
+    type: Optional[str] = None,
+    db=Depends(get_db),
 ):
     url = "https://places.googleapis.com/v1/places:searchText"
 
@@ -258,9 +262,11 @@ def search_attractions(
 
     if "places" in response.json().keys():
         for attraction in response.json()["places"]:
-            formatted_response.append(crud.format_attraction(attraction=attraction))
+            formatted_response.append(
+                crud.format_attraction(db=db, attraction=attraction)
+            )
 
-    return formatted_response
+    return crud.sort_attractions_by_rating(formatted_response)
 
 
 @router.get(
@@ -339,7 +345,7 @@ def autocomplete_attractions(
                 }
             )
 
-    return formatted_response
+    return crud.sort_attractions_by_rating(formatted_response)
 
 
 @router.get(
@@ -405,9 +411,9 @@ def get_feed(
             )
 
         response = response.json()
-        formatted_response.append(crud.format_attraction(attraction=response))
+        formatted_response.append(crud.format_attraction(db=db, attraction=response))
 
-    return formatted_response
+    return crud.sort_attractions_by_rating(formatted_response)
 
 
 @router.post(

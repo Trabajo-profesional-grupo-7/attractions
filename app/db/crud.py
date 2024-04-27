@@ -11,7 +11,15 @@ from . import models
 # ATTRACTIONS
 
 
-def format_attraction(attraction):
+def sort_attractions_by_rating(attractions):
+    return sorted(
+        attractions,
+        key=lambda x: (x.avg_rating if x.avg_rating is not None else 0),
+        reverse=True,
+    )
+
+
+def format_attraction(db: Session, attraction):
     formatted_attraction = schemas.Attraction(
         attraction_id=attraction["id"],
         attraction_name=attraction["displayName"]["text"],
@@ -32,6 +40,15 @@ def format_attraction(attraction):
         photo_url = attraction["photos"][0]["name"]
         url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
         formatted_attraction.photo = url
+
+    attraction = get_attraction(db=db, attraction_id=attraction["id"])
+    if attraction:
+        formatted_attraction.liked_count = attraction.likes_count
+
+        if attraction.rating_count > 0:
+            formatted_attraction.avg_rating = (
+                attraction.rating_total / attraction.rating_count
+            )
 
     return formatted_attraction
 

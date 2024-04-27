@@ -97,3 +97,5 @@ class Attraction(BaseModel):
     country: str = None
     location: Location = None
     photo: str = None
+    avg_rating: float = None
+    liked_count: int = 0
