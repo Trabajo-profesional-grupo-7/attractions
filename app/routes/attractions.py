@@ -253,7 +253,7 @@ def search_attractions(
             json={
                 "textQuery": data.query,
                 "includedType": type,
-                "locationBias   ": {
+                "locationBias": {
                     "circle": {
                         "center": {"latitude": latitude, "longitude": longitude},
                         "radius": 500.0,
