@@ -170,8 +170,21 @@ def get_saved_attraction(db: Session, user_id: int, attraction_id: str):
     )
 
 
-def save_attraction(db: Session, user_id: int, attraction_id: str):
-    new_record = models.Saved(user_id=user_id, attraction_id=attraction_id)
+def save_attraction(
+    db: Session,
+    user_id: int,
+    attraction_id: str,
+    attraction_name: str,
+    attraction_country: str,
+    attraction_city: str,
+):
+    new_record = models.Saved(
+        user_id=user_id,
+        attraction_id=attraction_id,
+        attraction_name=attraction_name,
+        attraction_country=attraction_country,
+        attraction_city=attraction_city,
+    )
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -294,8 +307,21 @@ def get_done_attraction(db: Session, user_id: int, attraction_id: str):
     )
 
 
-def mark_as_done_attraction(db: Session, user_id: int, attraction_id: str):
-    new_record = models.Done(user_id=user_id, attraction_id=attraction_id)
+def mark_as_done_attraction(
+    db: Session,
+    user_id: int,
+    attraction_id: str,
+    attraction_name: str,
+    attraction_country: str,
+    attraction_city: str,
+):
+    new_record = models.Done(
+        user_id=user_id,
+        attraction_id=attraction_id,
+        attraction_name=attraction_name,
+        attraction_country=attraction_country,
+        attraction_city=attraction_city,
+    )
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -493,9 +519,22 @@ def check_if_schedule_is_valid(
 
 
 def schedule_attraction(
-    db: Session, user_id: int, attraction_id: str, day: datetime.date
+    db: Session,
+    user_id: int,
+    attraction_id: str,
+    day: datetime.date,
+    attraction_name: str,
+    attraction_country: str,
+    attraction_city: str,
 ):
-    new_record = models.Scheduled(user_id=user_id, attraction_id=attraction_id, day=day)
+    new_record = models.Scheduled(
+        user_id=user_id,
+        attraction_id=attraction_id,
+        day=day,
+        attraction_name=attraction_name,
+        attraction_country=attraction_country,
+        attraction_city=attraction_city,
+    )
     db.add(new_record)
     db.commit()
     db.refresh(new_record)

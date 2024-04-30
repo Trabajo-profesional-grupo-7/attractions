@@ -464,7 +464,12 @@ def save_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
             detail={"status": "error", "message": "Attraction already saved by user"},
         )
     return crud.save_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
+        attraction_name=data.attraction_name,
+        attraction_country=data.attraction_country,
+        attraction_city=data.attraction_city,
     )
 
 
@@ -561,7 +566,9 @@ def unlike_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
 )
 def mark_as_done_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_db)):
     if crud.get_done_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
     ):
         Logger().info("Attraction already marked as done by user")
         raise HTTPException(
@@ -572,7 +579,12 @@ def mark_as_done_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_d
             },
         )
     return crud.mark_as_done_attraction(
-        db=db, user_id=data.user_id, attraction_id=data.attraction_id
+        db=db,
+        user_id=data.user_id,
+        attraction_id=data.attraction_id,
+        attraction_name=data.attraction_name,
+        attraction_country=data.attraction_country,
+        attraction_city=data.attraction_city,
     )
 
 
@@ -724,10 +736,7 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
         )
 
     if not crud.check_if_schedule_is_valid(
-        db=db,
-        user_id=data.user_id,
-        attraction_id=data.attraction_id,
-        day=data.day,
+        db=db, user_id=data.user_id, attraction_id=data.attraction_id, day=data.day
     ):
         Logger().info(
             "Attraction has already been scheduled by user for specified date"
@@ -745,6 +754,9 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
         user_id=data.user_id,
         attraction_id=data.attraction_id,
         day=data.day,
+        attraction_name=data.attraction_name,
+        attraction_country=data.attraction_country,
+        attraction_city=data.attraction_city,
     )
 
 

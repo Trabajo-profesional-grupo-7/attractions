@@ -10,6 +10,9 @@ class Saved(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
+    attraction_name = Column(String)
+    attraction_country = Column(String)
+    attraction_city = Column(String)
     saved_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -18,6 +21,9 @@ class Done(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
+    attraction_name = Column(String)
+    attraction_country = Column(String)
+    attraction_city = Column(String)
     done_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -76,5 +82,8 @@ class Scheduled(Base):
     schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(String)
+    attraction_name = Column(String)
+    attraction_country = Column(String)
+    attraction_city = Column(String)
     day = Column(Date)
     scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)

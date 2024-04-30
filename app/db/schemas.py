@@ -7,11 +7,17 @@ from pydantic import BaseModel
 class SaveAttraction(BaseModel):
     user_id: int
     attraction_id: str
+    attraction_name: str
+    attraction_country: str
+    attraction_city: str
 
 
 class MarkAsDoneAttraction(BaseModel):
     user_id: int
     attraction_id: str
+    attraction_name: str
+    attraction_country: str
+    attraction_city: str
 
 
 class LikeAttraction(BaseModel):
@@ -51,6 +57,9 @@ class AutocompleteAttractions(BaseModel):
 class ScheduleAttraction(BaseModel):
     user_id: int
     attraction_id: str
+    attraction_name: str
+    attraction_country: str
+    attraction_city: str
     day: date
 
 
