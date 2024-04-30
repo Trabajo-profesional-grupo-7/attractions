@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.db import models
 from app.db.database import engine
-from app.routes.attractions import router as attractions
+from app.routes.routes import router as attractions
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -26,4 +26,4 @@ app.include_router(attractions)
 
 @app.get("/", include_in_schema=False)
 async def docs_redirect():
-    return RedirectResponse(url='/docs')
+    return RedirectResponse(url="/docs")

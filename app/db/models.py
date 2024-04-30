@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import CheckConstraint, Column, Date, DateTime, Integer, String
+from sqlalchemy import CheckConstraint, Column, Date, DateTime, Float, Integer, String
 
 from .database import Base
 
@@ -10,9 +10,6 @@ class Saved(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
-    attraction_name = Column(String)
-    attraction_country = Column(String)
-    attraction_city = Column(String)
     saved_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -21,9 +18,6 @@ class Done(Base):
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
-    attraction_name = Column(String)
-    attraction_country = Column(String)
-    attraction_city = Column(String)
     done_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -48,15 +42,6 @@ class Comments(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-# class Searches(Base):
-#     __tablename__ = "searches"
-
-#     search_id = Column(Integer, primary_key=True, autoincrement=True)
-#     user_id = Column(Integer)
-#     query = Column(String)
-#     searched_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-
 class Likes(Base):
     __tablename__ = "likes"
 
@@ -69,6 +54,12 @@ class Attractions(Base):
     __tablename__ = "attractions"
 
     attraction_id = Column(String, primary_key=True)
+    attraction_name = Column(String)
+    country = Column(String)
+    city = Column(String)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    photo = Column(String)
     likes_count = Column(Integer, default=0)
     saved_count = Column(Integer, default=0)
     done_count = Column(Integer, default=0)
@@ -82,8 +73,5 @@ class Scheduled(Base):
     schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(String)
-    attraction_name = Column(String)
-    attraction_country = Column(String)
-    attraction_city = Column(String)
     day = Column(Date)
     scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)

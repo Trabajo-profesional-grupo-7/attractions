@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel
 
@@ -7,17 +7,11 @@ from pydantic import BaseModel
 class SaveAttraction(BaseModel):
     user_id: int
     attraction_id: str
-    attraction_name: str
-    attraction_country: str
-    attraction_city: str
 
 
 class MarkAsDoneAttraction(BaseModel):
     user_id: int
     attraction_id: str
-    attraction_name: str
-    attraction_country: str
-    attraction_city: str
 
 
 class LikeAttraction(BaseModel):
@@ -57,9 +51,6 @@ class AutocompleteAttractions(BaseModel):
 class ScheduleAttraction(BaseModel):
     user_id: int
     attraction_id: str
-    attraction_name: str
-    attraction_country: str
-    attraction_city: str
     day: date
 
 
@@ -86,13 +77,13 @@ class Location(BaseModel):
 class AttractionByUser(BaseModel):
     attraction_id: str
     attraction_name: str
-    city: str = None
-    country: str = None
-    location: Location = None
-    photo: str = None
-    comments: List[Comment] = []
-    avg_rating: float = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    location: Optional[Location] = None
+    photo: Optional[str] = None
+    avg_rating: Optional[float] = None
     liked_count: int = 0
+    comments: List[Comment] = []
     is_liked: bool = False
     is_saved: bool = False
     user_rating: int = None
@@ -102,9 +93,9 @@ class AttractionByUser(BaseModel):
 class Attraction(BaseModel):
     attraction_id: str
     attraction_name: str
-    city: str = None
-    country: str = None
-    location: Location = None
-    photo: str = None
-    avg_rating: float = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    location: Optional[Location] = None
+    photo: Optional[str] = None
+    avg_rating: Optional[float] = None
     liked_count: int = 0

@@ -1,164 +1,45 @@
 import datetime
 import os
 from datetime import date
+from typing import List
 
+import requests
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db import schemas
+from app.routes import schemas
+from app.services import attractions_service
 
 from . import models
 
-# ATTRACTIONS
 
-
-def sort_attractions_by_rating(attractions):
-    return sorted(
-        attractions,
-        key=lambda x: (x.avg_rating if x.avg_rating is not None else 0),
-        reverse=True,
-    )
-
-
-def format_attraction(db: Session, attraction):
-    formatted_attraction = schemas.Attraction(
-        attraction_id=attraction["id"],
-        attraction_name=attraction["displayName"]["text"],
-    )
-
-    formatted_attraction.location = schemas.Location(
-        latitude=attraction["location"]["latitude"],
-        longitude=attraction["location"]["longitude"],
-    )
-
-    for element in attraction["addressComponents"]:
-        if "locality" in element["types"]:
-            formatted_attraction.city = element["longText"]
-        elif "country" in element["types"]:
-            formatted_attraction.country = element["longText"]
-
-    if "photos" in attraction.keys():
-        photo_url = attraction["photos"][0]["name"]
-        url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
-        formatted_attraction.photo = url
-
-    attraction = get_attraction(db=db, attraction_id=attraction["id"])
-    if attraction:
-        formatted_attraction.liked_count = attraction.likes_count
-
-        if attraction.rating_count > 0:
-            formatted_attraction.avg_rating = (
-                attraction.rating_total / attraction.rating_count
-            )
-
-    return formatted_attraction
-
-
-def format_attraction_by_user(db: Session, attraction, user_id):
-    formatted_attraction = schemas.AttractionByUser(
-        attraction_id=attraction["id"],
-        attraction_name=attraction["displayName"]["text"],
-    )
-
-    formatted_attraction.location = schemas.Location(
-        latitude=attraction["location"]["latitude"],
-        longitude=attraction["location"]["longitude"],
-    )
-
-    for element in attraction["addressComponents"]:
-        if "locality" in element["types"]:
-            formatted_attraction.city = element["longText"]
-        elif "country" in element["types"]:
-            formatted_attraction.country = element["longText"]
-
-    if "photos" in attraction.keys():
-        photo_url = attraction["photos"][0]["name"]
-        url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
-        formatted_attraction.photo = url
-
-    comments = (
-        db.query(models.Comments)
-        .filter(models.Comments.attraction_id == attraction["id"])
-        .all()
-    )
-    if comments:
-        for comment in comments:
-            formatted_attraction.comments.append(
-                schemas.Comment(
-                    comment_id=comment.comment_id,
-                    user_id=comment.user_id,
-                    comment=comment.comment,
-                )
-            )
-
-    if user_id:
-
-        if (
-            db.query(models.Likes)
-            .filter(
-                models.Likes.attraction_id == attraction["id"],
-                models.Likes.user_id == user_id,
-            )
-            .first()
-        ):
-            formatted_attraction.is_liked = True
-
-        if (
-            db.query(models.Done)
-            .filter(
-                models.Done.attraction_id == attraction["id"],
-                models.Done.user_id == user_id,
-            )
-            .first()
-        ):
-            formatted_attraction.is_done = True
-
-        if (
-            db.query(models.Saved)
-            .filter(
-                models.Saved.attraction_id == attraction["id"],
-                models.Saved.user_id == user_id,
-            )
-            .first()
-        ):
-            formatted_attraction.is_saved = True
-
-        user_rating = (
-            db.query(models.Ratings)
-            .filter(
-                models.Ratings.attraction_id == attraction["id"],
-                models.Ratings.user_id == user_id,
-            )
-            .first()
-        )
-
-        if user_rating:
-            formatted_attraction.user_rating = user_rating.rating
-
-    attraction = get_attraction(db=db, attraction_id=attraction["id"])
-    if attraction:
-        formatted_attraction.liked_count = attraction.likes_count
-
-        if attraction.rating_count > 0:
-            formatted_attraction.avg_rating = (
-                attraction.rating_total / attraction.rating_count
-            )
-
-    return formatted_attraction
-
-
-def get_attraction(db: Session, attraction_id: str):
-    return (
+# ATTRACTIONS TABLE
+def get_attraction_by_id(db: Session, attraction_id: str):
+    attraction = (
         db.query(models.Attractions)
-        .filter(
-            models.Attractions.attraction_id == attraction_id,
-        )
+        .filter(models.Attractions.attraction_id == attraction_id)
         .first()
     )
 
+    return attraction
 
-# SAVE
+
+def add_attraction(db: Session, attraction_db: models.Attractions):
+    db.add(attraction_db)
+    db.commit()
+    db.refresh(attraction_db)
+
+    return attraction_db
 
 
+def get_attractions_by_ids(db: Session, attractions_ids: List[str]):
+    attractions = []
+    for attraction_id in attractions_ids:
+        attractions.append(get_attraction_by_id(db=db, attraction_id=attraction_id))
+    return attractions
+
+
+# SAVED TABLE
 def get_saved_attraction(db: Session, user_id: int, attraction_id: str):
     return (
         db.query(models.Saved)
@@ -170,36 +51,13 @@ def get_saved_attraction(db: Session, user_id: int, attraction_id: str):
     )
 
 
-def save_attraction(
-    db: Session,
-    user_id: int,
-    attraction_id: str,
-    attraction_name: str,
-    attraction_country: str,
-    attraction_city: str,
-):
-    new_record = models.Saved(
-        user_id=user_id,
-        attraction_id=attraction_id,
-        attraction_name=attraction_name,
-        attraction_country=attraction_country,
-        attraction_city=attraction_city,
-    )
+def save_attraction(db: Session, user_id: int, attraction_id: str):
+    new_record = models.Saved(user_id=user_id, attraction_id=attraction_id)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_id)
-        .first()
-    )
-
-    if not attraction:
-        attraction = models.Attractions(attraction_id=attraction_id)
-        db.add(attraction)
-        db.commit()
-        db.refresh(attraction)
+    attraction = get_attraction_by_id(db=db, attraction_id=attraction_id)
 
     attraction.saved_count += 1
 
@@ -214,10 +72,8 @@ def unsave_attraction(db: Session, attraction_to_unsave: models.Saved):
     db.commit()
     db.flush()
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_to_unsave.attraction_id)
-        .first()
+    attraction = get_attraction_by_id(
+        db=db, attraction_id=attraction_to_unsave.attraction_id
     )
 
     attraction.saved_count -= 1
@@ -227,13 +83,30 @@ def unsave_attraction(db: Session, attraction_to_unsave: models.Saved):
 
 
 def get_saved_attractions_list(db: Session, user_id: int, page: int, size: int):
-    return (
+    saved_attractions_list = (
         db.query(models.Saved)
         .filter(models.Saved.user_id == user_id)
         .offset(page)
         .limit(size)
         .all()
     )
+
+    return get_attractions_by_ids(
+        db=db, attractions_ids=[x.attraction_id for x in saved_attractions_list]
+    )
+
+
+def user_saved_attraction(db: Session, attraction_id: str, user_id: int):
+    if (
+        db.query(models.Saved)
+        .filter(
+            models.Saved.attraction_id == attraction_id,
+            models.Saved.user_id == user_id,
+        )
+        .first()
+    ):
+        return True
+    return False
 
 
 # LIKE
@@ -256,17 +129,7 @@ def like_attraction(db: Session, user_id: int, attraction_id: str):
     db.commit()
     db.refresh(new_record)
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_id)
-        .first()
-    )
-
-    if not attraction:
-        attraction = models.Attractions(attraction_id=attraction_id)
-        db.add(attraction)
-        db.commit()
-        db.refresh(attraction)
+    attraction = get_attraction_by_id(db=db, attraction_id=attraction_id)
 
     attraction.likes_count += 1
 
@@ -281,16 +144,27 @@ def unlike_attraction(db: Session, attraction_to_unlike: models.Likes):
     db.commit()
     db.flush()
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_to_unlike.attraction_id)
-        .first()
+    attraction = get_attraction_by_id(
+        db=db, attraction_id=attraction_to_unlike.attraction_id
     )
 
     attraction.likes_count -= 1
 
     db.commit()
     db.refresh(attraction)
+
+
+def user_liked_attraction(db: Session, attraction_id: str, user_id: int):
+    if (
+        db.query(models.Likes)
+        .filter(
+            models.Likes.attraction_id == attraction_id,
+            models.Likes.user_id == user_id,
+        )
+        .first()
+    ):
+        return True
+    return False
 
 
 # DONE
@@ -307,36 +181,13 @@ def get_done_attraction(db: Session, user_id: int, attraction_id: str):
     )
 
 
-def mark_as_done_attraction(
-    db: Session,
-    user_id: int,
-    attraction_id: str,
-    attraction_name: str,
-    attraction_country: str,
-    attraction_city: str,
-):
-    new_record = models.Done(
-        user_id=user_id,
-        attraction_id=attraction_id,
-        attraction_name=attraction_name,
-        attraction_country=attraction_country,
-        attraction_city=attraction_city,
-    )
+def mark_as_done_attraction(db: Session, user_id: int, attraction_id: str):
+    new_record = models.Done(user_id=user_id, attraction_id=attraction_id)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_id)
-        .first()
-    )
-
-    if not attraction:
-        attraction = models.Attractions(attraction_id=attraction_id)
-        db.add(attraction)
-        db.commit()
-        db.refresh(attraction)
+    attraction = get_attraction_by_id(db=db, attraction_id=attraction_id)
 
     attraction.done_count += 1
 
@@ -351,13 +202,8 @@ def mark_as_undone_attraction(db: Session, attraction_to_mark_as_undone: models.
     db.commit()
     db.flush()
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(
-            models.Attractions.attraction_id
-            == attraction_to_mark_as_undone.attraction_id
-        )
-        .first()
+    attraction = get_attraction_by_id(
+        db=db, attraction_id=attraction_to_mark_as_undone.attraction_id
     )
 
     attraction.done_count -= 1
@@ -367,13 +213,30 @@ def mark_as_undone_attraction(db: Session, attraction_to_mark_as_undone: models.
 
 
 def get_done_attractions_list(db: Session, user_id: int, page: int, size: int):
-    return (
+    done_list = (
         db.query(models.Done)
         .filter(models.Done.user_id == user_id)
         .offset(page)
         .limit(size)
         .all()
     )
+
+    return get_attractions_by_ids(
+        db=db, attractions_ids=[x.attraction_id for x in done_list]
+    )
+
+
+def user_did_attraction(db: Session, attraction_id: str, user_id: int):
+    if (
+        db.query(models.Done)
+        .filter(
+            models.Done.attraction_id == attraction_id,
+            models.Done.user_id == user_id,
+        )
+        .first()
+    ):
+        return True
+    return False
 
 
 # RATE
@@ -415,17 +278,7 @@ def rate_attraction(db: Session, user_id: int, attraction_id: str, rating: float
     db.commit()
     db.refresh(new_record)
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_id)
-        .first()
-    )
-
-    if not attraction:
-        attraction = models.Attractions(attraction_id=attraction_id)
-        db.add(attraction)
-        db.commit()
-        db.refresh(attraction)
+    attraction = get_attraction_by_id(db=db, attraction_id=attraction_id)
 
     attraction.rating_count += 1
     attraction.rating_total += float(rating)
@@ -434,6 +287,20 @@ def rate_attraction(db: Session, user_id: int, attraction_id: str, rating: float
     db.refresh(attraction)
 
     return new_record
+
+
+def get_user_rating(db: Session, attraction_id: str, user_id: int):
+    user_rating = (
+        db.query(models.Ratings)
+        .filter(
+            models.Ratings.attraction_id == attraction_id,
+            models.Ratings.user_id == user_id,
+        )
+        .first()
+    )
+    if not user_rating:
+        return None
+    return user_rating.rating
 
 
 # COMMENT
@@ -475,16 +342,12 @@ def delete_comment(db: Session, comment_to_delete: models.Comments):
     db.flush()
 
 
-# SEARCH
-
-
-def add_search(db: Session, query: str, user_id: int):
-    new_record = models.Searches(user_id=user_id, query=query)
-    db.add(new_record)
-    db.commit()
-    db.refresh(new_record)
-
-    return new_record
+def get_attraction_comments(db: Session, attraction_id: str):
+    return (
+        db.query(models.Comments)
+        .filter(models.Comments.attraction_id == attraction_id)
+        .all()
+    )
 
 
 # SCHEDULE
@@ -519,37 +382,14 @@ def check_if_schedule_is_valid(
 
 
 def schedule_attraction(
-    db: Session,
-    user_id: int,
-    attraction_id: str,
-    day: datetime.date,
-    attraction_name: str,
-    attraction_country: str,
-    attraction_city: str,
+    db: Session, user_id: int, attraction_id: str, day: datetime.date
 ):
-    new_record = models.Scheduled(
-        user_id=user_id,
-        attraction_id=attraction_id,
-        day=day,
-        attraction_name=attraction_name,
-        attraction_country=attraction_country,
-        attraction_city=attraction_city,
-    )
+    new_record = models.Scheduled(user_id=user_id, attraction_id=attraction_id, day=day)
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(models.Attractions.attraction_id == attraction_id)
-        .first()
-    )
-
-    if not attraction:
-        attraction = models.Attractions(attraction_id=attraction_id)
-        db.add(attraction)
-        db.commit()
-        db.refresh(attraction)
+    attraction = get_attraction_by_id(db=db, attraction_id=attraction_id)
 
     attraction.scheduled_count += 1
 
@@ -575,12 +415,8 @@ def unschedule_attraction(db: Session, attraction_to_unschedule: models.Schedule
     db.commit()
     db.flush()
 
-    attraction = (
-        db.query(models.Attractions)
-        .filter(
-            models.Attractions.attraction_id == attraction_to_unschedule.attraction_id
-        )
-        .first()
+    attraction = get_attraction_by_id(
+        db=db, attraction_id=attraction_to_unschedule.attraction_id
     )
 
     attraction.scheduled_count -= 1
@@ -590,10 +426,14 @@ def unschedule_attraction(db: Session, attraction_to_unschedule: models.Schedule
 
 
 def get_scheduled_attractions_list(db: Session, user_id: int, page: int, size: int):
-    return (
+    scheduled_list = (
         db.query(models.Scheduled)
         .filter(models.Scheduled.user_id == user_id)
         .offset(page)
         .limit(size)
         .all()
+    )
+
+    return get_attractions_by_ids(
+        db=db, attractions_ids=[x.attraction_id for x in scheduled_list]
     )

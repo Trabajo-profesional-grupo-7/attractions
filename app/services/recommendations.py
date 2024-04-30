@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 
-from . import models
+from ..db import models
 
 # Cantidad de atracciones que se quieren recomendar
 N_RECOMMENDATIONS = 20
