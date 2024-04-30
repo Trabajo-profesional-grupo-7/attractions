@@ -59,7 +59,7 @@ def map_to_attraction_by_user_schema(
                 )
             )
 
-    attraction_by_user_schema.is_liked = crud.user_liked_attraction(
+    attraction_by_user_schema.is_liked = crud.get_user_liked_attractions(
         db=db, attraction_id=attraction_id, user_id=user_id
     )
 

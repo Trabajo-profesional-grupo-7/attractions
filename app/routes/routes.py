@@ -311,7 +311,7 @@ def get_saved_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    attractions = crud.get_saved_attractions_list(
+    attractions = crud.get_user_saved_attractions(
         db=db, user_id=user_id, page=page, size=size
     )
 
@@ -449,7 +449,7 @@ def get_done_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    attractions = crud.get_done_attractions_list(
+    attractions = crud.get_user_done_attractions(
         db=db, user_id=user_id, page=page, size=size
     )
 
@@ -661,7 +661,7 @@ def get_scheduled_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    attractions = crud.get_scheduled_attractions_list(
+    attractions = crud.get_user_scheduled_list(
         db=db, user_id=user_id, page=page, size=size
     )
 

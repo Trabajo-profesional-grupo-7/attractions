@@ -82,7 +82,7 @@ def unsave_attraction(db: Session, attraction_to_unsave: models.Saved):
     db.refresh(attraction)
 
 
-def get_saved_attractions_list(db: Session, user_id: int, page: int, size: int):
+def get_user_saved_attractions(db: Session, user_id: int, page: int, size: int):
     saved_attractions_list = (
         db.query(models.Saved)
         .filter(models.Saved.user_id == user_id)
@@ -154,7 +154,7 @@ def unlike_attraction(db: Session, attraction_to_unlike: models.Likes):
     db.refresh(attraction)
 
 
-def user_liked_attraction(db: Session, attraction_id: str, user_id: int):
+def get_user_liked_attractions(db: Session, attraction_id: str, user_id: int):
     if (
         db.query(models.Likes)
         .filter(
@@ -212,7 +212,7 @@ def mark_as_undone_attraction(db: Session, attraction_to_mark_as_undone: models.
     db.refresh(attraction)
 
 
-def get_done_attractions_list(db: Session, user_id: int, page: int, size: int):
+def get_user_done_attractions(db: Session, user_id: int, page: int, size: int):
     done_list = (
         db.query(models.Done)
         .filter(models.Done.user_id == user_id)
@@ -425,7 +425,7 @@ def unschedule_attraction(db: Session, attraction_to_unschedule: models.Schedule
     db.refresh(attraction)
 
 
-def get_scheduled_attractions_list(db: Session, user_id: int, page: int, size: int):
+def get_user_scheduled_list(db: Session, user_id: int, page: int, size: int):
     scheduled_list = (
         db.query(models.Scheduled)
         .filter(models.Scheduled.user_id == user_id)
