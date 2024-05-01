@@ -4,7 +4,6 @@ from typing import List, Optional
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy.orm import Session
 
 from app.db import crud
 from app.db.database import get_db
@@ -582,7 +581,7 @@ def update_comment(
     description="Schedules an attraction for a user at a certain timestamp",
 )
 def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
-    if data.day < datetime.date.today():
+    if data.datetime < datetime.datetime.now(datetime.timezone.utc):
         Logger().info("Cannot schedule an attraction for a date before today")
         raise HTTPException(
             status_code=404,
@@ -606,7 +605,7 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
         db=db,
         user_id=data.user_id,
         attraction_id=data.attraction_id,
-        day=data.day,
+        datetime=data.datetime,
     ):
         Logger().info(
             "Attraction has already been scheduled by user for specified date"
@@ -623,7 +622,7 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
         db=db,
         user_id=data.user_id,
         attraction_id=data.attraction_id,
-        day=data.day,
+        datetime=data.datetime,
     )
 
 
@@ -695,5 +694,5 @@ def update_schedule(
     return crud.update_scheduled_attraction(
         db=db,
         scheduled_to_update=scheduled_attraction,
-        new_day=data.new_day,
+        new_datetime=data.new_datetime,
     )

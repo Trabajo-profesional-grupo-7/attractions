@@ -1,5 +1,5 @@
-from datetime import date, datetime
-from typing import List, Optional, Tuple
+from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -51,7 +51,7 @@ class AutocompleteAttractions(BaseModel):
 class ScheduleAttraction(BaseModel):
     user_id: int
     attraction_id: str
-    day: date
+    datetime: datetime
 
 
 class UnscheduleAttraction(BaseModel):
@@ -60,7 +60,7 @@ class UnscheduleAttraction(BaseModel):
 
 class UpdateSchedule(BaseModel):
     schedule_id: int
-    new_day: date
+    new_datetime: datetime
 
 
 class Comment(BaseModel):

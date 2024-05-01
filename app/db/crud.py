@@ -1,14 +1,8 @@
 import datetime
-import os
 from datetime import date
 from typing import List
 
-import requests
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
-from app.routes import schemas
-from app.services import attractions_service
 
 from . import models
 
@@ -364,14 +358,14 @@ def get_scheduled_attraction_by_id(db: Session, schedule_id: int):
 
 
 def check_if_schedule_is_valid(
-    db: Session, user_id: int, attraction_id: str, day: datetime.date
+    db: Session, user_id: int, attraction_id: str, datetime: datetime.datetime
 ):
     scheduled_attraction = (
         db.query(models.Scheduled)
         .filter(
             models.Scheduled.user_id == user_id,
             models.Scheduled.attraction_id == attraction_id,
-            models.Scheduled.day == day,
+            models.Scheduled.day == datetime,
         )
         .first()
     )
@@ -382,9 +376,11 @@ def check_if_schedule_is_valid(
 
 
 def schedule_attraction(
-    db: Session, user_id: int, attraction_id: str, day: datetime.date
+    db: Session, user_id: int, attraction_id: str, datetime: datetime.datetime
 ):
-    new_record = models.Scheduled(user_id=user_id, attraction_id=attraction_id, day=day)
+    new_record = models.Scheduled(
+        user_id=user_id, attraction_id=attraction_id, day=datetime
+    )
     db.add(new_record)
     db.commit()
     db.refresh(new_record)
@@ -400,9 +396,9 @@ def schedule_attraction(
 
 
 def update_scheduled_attraction(
-    db: Session, scheduled_to_update: models.Scheduled, new_day: date
+    db: Session, scheduled_to_update: models.Scheduled, new_datetime: datetime.datetime
 ):
-    scheduled_to_update.day = new_day
+    scheduled_to_update.day = new_datetime
 
     db.commit()
     db.refresh(scheduled_to_update)
