@@ -69,6 +69,7 @@ def get_attraction(
     description="Gets nearby attractions given a latitude, longitude and radius. Can optionally filter by a list of attraction types.",
 )
 def get_nearby_attractions(
+    attractions_filter: schemas.AttractionsFilter,
     latitude: float = Path(
         ..., title="Latitude", description="Center latitude for search"
     ),
@@ -78,18 +79,13 @@ def get_nearby_attractions(
     radius: float = Path(
         ..., title="Radius", description="Search radius in meters", le=50000
     ),
-    attraction_types: List[str] = Query(
-        None,
-        title="Attraction Types",
-        description="Filter by attraction types",
-    ),
     db=Depends(get_db),
 ):
     attractions = attractions_service.get_nearby_attractions(
         latitude=latitude,
         longitude=longitude,
         radius=radius,
-        attraction_types=attraction_types,
+        attraction_types=attractions_filter.attraction_types,
     )
 
     formatted_response = []

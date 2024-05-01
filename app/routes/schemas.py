@@ -74,6 +74,10 @@ class Location(BaseModel):
     longitude: float
 
 
+class AttractionsFilter(BaseModel):
+    attraction_types: Optional[List[str]] = None
+
+
 class AttractionByUser(BaseModel):
     attraction_id: str
     attraction_name: str
