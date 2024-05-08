@@ -6,7 +6,7 @@ from .database import Base
 
 
 class Saved(Base):
-    __tablename__ = "saved2"
+    __tablename__ = "saved"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -14,7 +14,7 @@ class Saved(Base):
 
 
 class Done(Base):
-    __tablename__ = "done2"
+    __tablename__ = "done"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -22,7 +22,7 @@ class Done(Base):
 
 
 class Ratings(Base):
-    __tablename__ = "ratings2"
+    __tablename__ = "ratings"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -33,7 +33,7 @@ class Ratings(Base):
 
 
 class Comments(Base):
-    __tablename__ = "comments2"
+    __tablename__ = "comments"
 
     comment_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
@@ -43,7 +43,7 @@ class Comments(Base):
 
 
 class Likes(Base):
-    __tablename__ = "likes2"
+    __tablename__ = "likes"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -51,7 +51,7 @@ class Likes(Base):
 
 
 class Attractions(Base):
-    __tablename__ = "attractions2"
+    __tablename__ = "attractions"
 
     attraction_id = Column(String, primary_key=True)
     attraction_name = Column(String)
@@ -71,7 +71,7 @@ class Attractions(Base):
 
 
 class Scheduled(Base):
-    __tablename__ = "scheduled2"
+    __tablename__ = "scheduled"
     schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(String)
