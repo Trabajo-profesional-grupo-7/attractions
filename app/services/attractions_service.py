@@ -25,7 +25,7 @@ def get_attraction_by_id(attraction_id: str) -> dict:
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "displayName,id,addressComponents,photos,location",
+        "X-Goog-FieldMask": "displayName,id,addressComponents,photos,location,types",
     }
 
     response = requests.get(url, headers=headers)
@@ -50,7 +50,7 @@ def get_nearby_attractions(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location,places.types",
     }
 
     data = {
@@ -67,6 +67,7 @@ def get_nearby_attractions(
     response = requests.post(url, json=data, headers=headers)
 
     if response.status_code != 200:
+        Logger().err(f"External API error: {response.content}")
         raise HTTPException(
             status_code=404,
             detail={
@@ -152,7 +153,7 @@ def get_feed(user_id: int, page: int, size: int):
     recommendations = response.get("Item")
 
     if not recommendations:
-        Logger().info("No attractions were found")
+        Logger().err("No attractions were found")
         raise HTTPException(
             status_code=404,
             detail={

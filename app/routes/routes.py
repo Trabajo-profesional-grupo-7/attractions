@@ -69,7 +69,9 @@ def get_attraction(
     description="Gets nearby attractions given a latitude, longitude and radius. Can optionally filter by a list of attraction types.",
 )
 def get_nearby_attractions(
-    attractions_filter: schemas.AttractionsFilter,
+    attractions_filter: Optional[
+        schemas.AttractionsFilter
+    ] = schemas.AttractionsFilter(),
     latitude: float = Path(
         ..., title="Latitude", description="Center latitude for search"
     ),
