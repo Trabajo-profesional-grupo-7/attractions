@@ -6,7 +6,7 @@ from .database import Base
 
 
 class Saved(Base):
-    __tablename__ = "saved"
+    __tablename__ = "saved2"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -14,7 +14,7 @@ class Saved(Base):
 
 
 class Done(Base):
-    __tablename__ = "done"
+    __tablename__ = "done2"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -22,7 +22,7 @@ class Done(Base):
 
 
 class Ratings(Base):
-    __tablename__ = "ratings"
+    __tablename__ = "ratings2"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -33,7 +33,7 @@ class Ratings(Base):
 
 
 class Comments(Base):
-    __tablename__ = "comments"
+    __tablename__ = "comments2"
 
     comment_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
@@ -43,7 +43,7 @@ class Comments(Base):
 
 
 class Likes(Base):
-    __tablename__ = "likes"
+    __tablename__ = "likes2"
 
     user_id = Column(Integer, primary_key=True)
     attraction_id = Column(String, primary_key=True)
@@ -51,7 +51,7 @@ class Likes(Base):
 
 
 class Attractions(Base):
-    __tablename__ = "attractions"
+    __tablename__ = "attractions2"
 
     attraction_id = Column(String, primary_key=True)
     attraction_name = Column(String)
@@ -66,10 +66,11 @@ class Attractions(Base):
     rating_count = Column(Integer, default=0)
     rating_total = Column(Integer, default=0)
     scheduled_count = Column(Integer, default=0)
+    types = Column(String, default=[])
 
 
 class Scheduled(Base):
-    __tablename__ = "scheduled"
+    __tablename__ = "scheduled2"
     schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(String)

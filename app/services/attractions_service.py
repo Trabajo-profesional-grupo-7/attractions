@@ -92,7 +92,7 @@ def search_attractions(query: str, type, latitude, longitude):
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location,places.types",
     }
 
     if latitude and longitude:
@@ -107,6 +107,7 @@ def search_attractions(query: str, type, latitude, longitude):
                         "radius": 500.0,
                     }
                 },
+                "rankPreference": "RELEVANCE",
             },
             headers=headers,
         )

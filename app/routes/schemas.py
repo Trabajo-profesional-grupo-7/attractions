@@ -92,6 +92,7 @@ class AttractionByUser(BaseModel):
     is_saved: bool = False
     user_rating: int = None
     is_done: bool = False
+    types: List[str] = []
 
 
 class Attraction(BaseModel):
@@ -103,3 +104,4 @@ class Attraction(BaseModel):
     photo: Optional[str] = None
     avg_rating: Optional[float] = None
     liked_count: int = 0
+    types: List[str] = []

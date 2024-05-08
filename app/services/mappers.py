@@ -1,9 +1,11 @@
+import json
 import os
 
 from sqlalchemy.orm import Session
 
 from app.db import crud, models
 from app.routes import schemas
+from app.services.constants import ATTRACTION_TYPES
 
 
 def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attraction:
@@ -18,6 +20,7 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
         city=attraction_db.city,
         photo=attraction_db.photo,
         liked_count=attraction_db.likes_count,
+        types=json.loads(attraction_db.types),
     )
 
     if attraction_db.rating_count > 0:
@@ -44,6 +47,7 @@ def map_to_attraction_by_user_schema(
         city=attraction_db.city,
         photo=attraction_db.photo,
         liked_count=attraction_db.likes_count,
+        types=json.loads(attraction_db.types),
     )
 
     comments = crud.get_attraction_comments(
@@ -90,6 +94,17 @@ def map_to_attraction_db(attraction: dict) -> models.Attractions:
         latitude=attraction["location"]["latitude"],
         longitude=attraction["location"]["longitude"],
     )
+    print(f"Attración {attraction_db.attraction_name}")
+    # print(f"primaryType: {attraction['primaryType']}")
+    # print(f"typeDisplayPrimaryrType: {attraction['primaryTypeDisplayName']}")
+    print(f"types: {attraction['types']}\n\n")
+
+    if "types" in attraction.keys():
+        attraction_types = []
+        for type in attraction["types"]:
+            if type in ATTRACTION_TYPES:
+                attraction_types.append(type)
+        attraction_db.types = json.dumps(attraction_types)
 
     for element in attraction["addressComponents"]:
         if "locality" in element["types"]:
