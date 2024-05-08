@@ -27,6 +27,8 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
         attraction_schema.avg_rating = (
             attraction_db.rating_total / attraction_db.rating_count
         )
+    else:
+        attraction_schema.avg_rating = attraction_db.external_rating
 
     return attraction_schema
 
@@ -83,6 +85,8 @@ def map_to_attraction_by_user_schema(
         attraction_by_user_schema.avg_rating = (
             attraction_db.rating_total / attraction_db.rating_count
         )
+    else:
+        attraction_by_user_schema.avg_rating = attraction_db.external_rating
 
     return attraction_by_user_schema
 
@@ -94,17 +98,12 @@ def map_to_attraction_db(attraction: dict) -> models.Attractions:
         latitude=attraction["location"]["latitude"],
         longitude=attraction["location"]["longitude"],
     )
-    print(f"Attración {attraction_db.attraction_name}")
-    # print(f"primaryType: {attraction['primaryType']}")
-    # print(f"typeDisplayPrimaryrType: {attraction['primaryTypeDisplayName']}")
-    print(f"types: {attraction['types']}\n\n")
 
-    if "types" in attraction.keys():
-        attraction_types = []
-        for type in attraction["types"]:
-            if type in ATTRACTION_TYPES:
-                attraction_types.append(type)
-        attraction_db.types = json.dumps(attraction_types)
+    attraction_types = []
+    for type in attraction["types"]:
+        if type in ATTRACTION_TYPES:
+            attraction_types.append(type)
+    attraction_db.types = json.dumps(attraction_types)
 
     for element in attraction["addressComponents"]:
         if "locality" in element["types"]:
@@ -116,5 +115,7 @@ def map_to_attraction_db(attraction: dict) -> models.Attractions:
         photo_url = attraction["photos"][0]["name"]
         url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
         attraction_db.photo = url
+
+    attraction_db.external_rating = attraction["rating"]
 
     return attraction_db

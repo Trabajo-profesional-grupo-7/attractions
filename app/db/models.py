@@ -67,6 +67,7 @@ class Attractions(Base):
     rating_total = Column(Integer, default=0)
     scheduled_count = Column(Integer, default=0)
     types = Column(String, default=[])
+    external_rating = Column(Float, default=0)
 
 
 class Scheduled(Base):
