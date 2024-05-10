@@ -111,3 +111,8 @@ class UpdateRecommendations(BaseModel):
     user_id: int
     default_city: str
     preferences: List[str] = []
+
+
+class CreatePlan(BaseModel):
+    user_id: int
+    city: str

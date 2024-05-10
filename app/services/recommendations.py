@@ -79,15 +79,15 @@ def run_recommendation_system(db: Session):
             print("\nMatriz filtrada:")
             print(filtered_matrix)
 
-            recomendations = (
+            recommendations = (
                 filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
             )
             print("\nRecomendaciones:")
-            print(recomendations)
+            print(recommendations)
 
             item_data = {
                 "user_id": user_id,
-                "attraction_ids": recomendations,
+                "attraction_ids": recommendations,
             }
 
             table.put_item(Item=item_data)
@@ -110,3 +110,66 @@ def update_recommendations(user_id: int, attractions_ids: List[str]):
     }
 
     table.put_item(Item=item_data)
+
+
+def get_recommendations_for_user_in_city(db: Session, user_id: int, city: str):
+    df_ratings = pd.DataFrame(
+        [row.__dict__ for row in (db.query(models.Ratings).all())],
+        columns=["user_id", "attraction_id", "rating", "rated_at"],
+    )
+
+    df_attractions = pd.DataFrame(
+        (
+            db.query(models.Attractions.attraction_id, models.Attractions.city)
+            .filter(
+                models.Attractions.city == city,
+            )
+            .all()
+        ),
+        columns=["attraction_id", "city"],
+    )
+
+    df_attractions["attraction_id"] = df_attractions["attraction_id"].astype(str)
+    df_ratings["attraction_id"] = df_ratings["attraction_id"].astype(str)
+
+    df = pd.merge(
+        df_ratings.reset_index(drop=True),
+        df_attractions.reset_index(drop=True),
+        on="attraction_id",
+        how="inner",
+    )
+
+    print("df:")
+    print(df)
+
+    # Matriz usuarios-atracciones
+    matrix = df.pivot(index="user_id", columns="attraction_id", values="rating")
+
+    # Se rellenan los nulos
+    matrix = matrix.fillna(FILLNA_VALUE)
+    print("\nMatriz:")
+    print(matrix)
+
+    user_similarity = cosine_similarity([matrix.loc[user_id]], matrix)
+
+    print(user_similarity)
+
+    # Se obtienen las posiciones de los usuarios más cercanos
+    # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
+    positions = n_greatest_positions(user_similarity, N_RECOMMENDATIONS + 1)
+    print("\nPositions:")
+    print(positions)
+
+    # se filtra a la matriz dejando solamente a los usuarios cercanos
+    filtered_matrix = matrix.iloc[positions]
+    if user_id in filtered_matrix.index:
+        filtered_matrix = filtered_matrix.drop(user_id, axis=0)
+
+    print("\nMatriz filtrada:")
+    print(filtered_matrix)
+
+    recommendations = filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
+    print("\nRecomendaciones:")
+    print(recommendations)
+
+    return recommendations

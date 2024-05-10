@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 from typing import List, Optional
 
@@ -289,10 +290,45 @@ def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(ge
         return response
 
     response = Response(status_code=422)
-    response.headers["X-Message"] = (
+    response.headers["message"] = (
         f"Recommendations were not updated because user {request.user_id} does not yet have a sufficient number of ratings made"
     )
     return response
+
+
+@router.put(
+    "/create_plan/",
+    status_code=201,
+    tags=["Recommendations"],
+    description="Returns recommended attractions to visit a city for a certain user",
+)
+def create_plan(
+    data: schemas.CreatePlan,
+    db=Depends(get_db),
+):
+
+    attractions_ids = recommendations.get_recommendations_for_user_in_city(
+        db=db, user_id=data.user_id, city=data.city
+    )
+
+    formatted_response = []
+
+    for attraction_id in attractions_ids:
+        attraction_db = crud.get_attraction_by_id(db=db, attraction_id=attraction_id)
+
+        if not attraction_db:
+            attraction_db = crud.add_attraction(
+                db=db,
+                attraction_db=attractions_service.get_attraction_by_id(
+                    attraction_id=attraction_id
+                ),
+            )
+
+        formatted_response.append(
+            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+        )
+
+    return formatted_response
 
 
 # SAVE
