@@ -116,6 +116,7 @@ def map_to_attraction_db(attraction: dict) -> models.Attractions:
         url = f"https://places.googleapis.com/v1/{photo_url}/media?maxHeightPx=400&maxWidthPx=400&key={os.getenv('ATTRACTIONS_API_KEY')}"
         attraction_db.photo = url
 
-    attraction_db.external_rating = attraction["rating"]
+    if "rating" in attraction.keys():
+        attraction_db.external_rating = attraction["rating"]
 
     return attraction_db

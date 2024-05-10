@@ -3,13 +3,13 @@ import os
 from typing import List, Optional
 
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.db import crud
 from app.db.database import get_db
 from app.routes import schemas
 from app.services import attractions_service, mappers, recommendations
-from app.services.constants import ATTRACTION_TYPES
+from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_RATINGS
 from app.services.logger import Logger
 
 router = APIRouter()
@@ -199,7 +199,7 @@ def autocomplete_attractions(
 @router.get(
     "/attractions/recommendations/{user_id}",
     status_code=200,
-    tags=["Get Attractions"],
+    tags=["Recommendations"],
     description="Gets recommended attractions for a given user ID",
 )
 def get_feed(
@@ -234,11 +234,65 @@ def get_feed(
 @router.post(
     "/attractions/run-recommendation-system",
     status_code=201,
-    tags=["Get Attractions"],
+    tags=["Recommendations"],
     description="Runs the recommendation system",
 )
 def run_recommendation_system(db=Depends(get_db)):
     recommendations.run_recommendation_system(db=db)
+
+
+@router.put(
+    "/update_recommendations/",
+    status_code=201,
+    tags=["Recommendations"],
+    description="Updates the recommendations for a certain user given preferences and default city",
+)
+def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(get_db)):
+    if (
+        crud.number_of_ratings_for_user(db=db, user_id=request.user_id)
+        < MINIMUM_NUMBER_OF_RATINGS
+    ):
+        attractions = []
+
+        for preference in request.preferences:
+            for attraction in attractions_service.search_attractions(
+                query=f"{preference} in {request.default_city}"
+            ):
+                attractions.append(attraction)
+
+        for attraction in attractions:
+            attraction_db = crud.get_attraction_by_id(
+                db=db, attraction_id=attraction.attraction_id
+            )
+
+            if not attraction_db:
+                attraction_db = crud.add_attraction(
+                    db=db,
+                    attraction_db=attraction,
+                )
+
+        attractions = sorted(
+            attractions,
+            key=lambda x: (x.external_rating if x.external_rating is not None else 0),
+            reverse=True,
+        )
+
+        recommendations.update_recommendations(
+            user_id=request.user_id,
+            attractions_ids=[x.attraction_id for x in attractions],
+        )
+
+        response = Response(status_code=200)
+        response.headers["X-Message"] = (
+            f"Recommendations for user {request.user_id} updated successfully"
+        )
+        return response
+
+    response = Response(status_code=422)
+    response.headers["X-Message"] = (
+        f"Recommendations were not updated because user {request.user_id} does not yet have a sufficient number of ratings made"
+    )
+    return response
 
 
 # SAVE

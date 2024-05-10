@@ -105,3 +105,9 @@ class Attraction(BaseModel):
     avg_rating: Optional[float] = None
     liked_count: int = 0
     types: List[str] = []
+
+
+class UpdateRecommendations(BaseModel):
+    user_id: int
+    default_city: str
+    preferences: List[str] = []

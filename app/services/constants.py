@@ -1,3 +1,5 @@
+MINIMUM_NUMBER_OF_RATINGS = 10
+
 ATTRACTION_TYPES = [
     "airport",
     "american_restaurant",

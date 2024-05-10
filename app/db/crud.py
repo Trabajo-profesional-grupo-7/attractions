@@ -297,6 +297,16 @@ def get_user_rating(db: Session, attraction_id: str, user_id: int):
     return user_rating.rating
 
 
+def number_of_ratings_for_user(db: Session, user_id: int):
+    return (
+        db.query(models.Ratings)
+        .filter(
+            models.Ratings.user_id == user_id,
+        )
+        .count()
+    )
+
+
 # COMMENT
 
 

@@ -87,7 +87,7 @@ def get_nearby_attractions(
     return formatted_attractions
 
 
-def search_attractions(query: str, type, latitude, longitude):
+def search_attractions(query: str, type=None, latitude=None, longitude=None):
     url = "https://places.googleapis.com/v1/places:searchText"
 
     headers = {

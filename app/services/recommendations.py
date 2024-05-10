@@ -1,9 +1,13 @@
 import os
+from typing import List
 
 import boto3
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
+
+from app.db import crud
+from app.services.constants import MINIMUM_NUMBER_OF_RATINGS
 
 from ..db import models
 
@@ -54,31 +58,55 @@ def run_recommendation_system(db: Session):
 
     for i, user_id in enumerate(matrix.index):
 
-        print(f"Se calcula para {user_id}")
+        if (
+            crud.number_of_ratings_for_user(db=db, user_id=user_id)
+            >= MINIMUM_NUMBER_OF_RATINGS
+        ):
 
-        # Se obtienen las posiciones de los usuarios más cercanos
-        # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
-        positions = n_greatest_positions(user_similarity[i], N_RECOMMENDATIONS + 1)
-        print("\nPositions:")
-        print(positions)
+            print(f"Se calcula para {user_id}")
 
-        # se filtra a la matriz dejando solamente a los usuarios cercanos
-        filtered_matrix = matrix.iloc[positions]
-        if user_id in filtered_matrix.index:
-            filtered_matrix = filtered_matrix.drop(user_id, axis=0)
+            # Se obtienen las posiciones de los usuarios más cercanos
+            # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
+            positions = n_greatest_positions(user_similarity[i], N_RECOMMENDATIONS + 1)
+            print("\nPositions:")
+            print(positions)
 
-        print("\nMatriz filtrada:")
-        print(filtered_matrix)
+            # se filtra a la matriz dejando solamente a los usuarios cercanos
+            filtered_matrix = matrix.iloc[positions]
+            if user_id in filtered_matrix.index:
+                filtered_matrix = filtered_matrix.drop(user_id, axis=0)
 
-        recomendations = (
-            filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
-        )
-        print("\nRecomendaciones:")
-        print(recomendations)
+            print("\nMatriz filtrada:")
+            print(filtered_matrix)
 
-        item_data = {
-            "user_id": user_id,
-            "attraction_ids": recomendations,
-        }
+            recomendations = (
+                filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
+            )
+            print("\nRecomendaciones:")
+            print(recomendations)
 
-        table.put_item(Item=item_data)
+            item_data = {
+                "user_id": user_id,
+                "attraction_ids": recomendations,
+            }
+
+            table.put_item(Item=item_data)
+
+
+def update_recommendations(user_id: int, attractions_ids: List[str]):
+    session = boto3.Session(
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    )
+
+    dynamodb = session.resource("dynamodb", region_name="us-east-2")
+
+    table_name = "recommendations"
+    table = dynamodb.Table(table_name)
+
+    item_data = {
+        "user_id": user_id,
+        "attraction_ids": attractions_ids,
+    }
+
+    table.put_item(Item=item_data)
