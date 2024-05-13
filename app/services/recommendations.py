@@ -27,15 +27,49 @@ def n_greatest_positions(numbers, n):
 
 
 def run_recommendation_system(db: Session):
-    df = pd.DataFrame(
+    df_ratings = pd.DataFrame(
         [row.__dict__ for row in (db.query(models.Ratings).all())],
         columns=["user_id", "attraction_id", "rating", "rated_at"],
     )
+
+    df_likes = pd.DataFrame(
+        [row.__dict__ for row in (db.query(models.Likes).all())],
+        columns=["user_id", "attraction_id", "liked_at"],
+    )
+    df_likes["is_liked"] = 1
+
+    df_saved = pd.DataFrame(
+        [row.__dict__ for row in (db.query(models.Saved).all())],
+        columns=["user_id", "attraction_id", "saved_at"],
+    )
+    df_saved["is_saved"] = 1
+
+    df_done = pd.DataFrame(
+        [row.__dict__ for row in (db.query(models.Done).all())],
+        columns=["user_id", "attraction_id", "done_at"],
+    )
+    df_done["is_done"] = 1
+
+    df = (
+        pd.merge(df_ratings, df_likes, on=["user_id", "attraction_id"], how="outer")
+        .merge(df_saved, on=["user_id", "attraction_id"], how="outer")
+        .merge(df_done, on=["user_id", "attraction_id"], how="outer")
+    )
+
+    df.fillna(0, inplace=True)
+
+    df["score"] = (
+        0.2 * df["is_liked"]
+        + 0.2 * df["is_saved"]
+        + 0.2 * df["is_done"]
+        + 0.4 * df["rating"] / 5
+    )
+
     print("df:")
     print(df)
 
     # Matriz usuarios-atracciones
-    matrix = df.pivot(index="user_id", columns="attraction_id", values="rating")
+    matrix = df.pivot(index="user_id", columns="attraction_id", values="score")
 
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
