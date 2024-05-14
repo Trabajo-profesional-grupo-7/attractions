@@ -297,13 +297,48 @@ def get_user_rating(db: Session, attraction_id: str, user_id: int):
     return user_rating.rating
 
 
-def number_of_ratings_for_user(db: Session, user_id: int):
-    return (
+def number_of_interactions_of_user(db: Session, user_id: int):
+    number_of_ratings_done = (
         db.query(models.Ratings)
         .filter(
             models.Ratings.user_id == user_id,
         )
         .count()
+    )
+    number_of_attractions_liked = (
+        db.query(models.Likes)
+        .filter(
+            models.Likes.user_id == user_id,
+        )
+        .count()
+    )
+    number_of_attractions_saved = (
+        db.query(models.Saved)
+        .filter(
+            models.Saved.user_id == user_id,
+        )
+        .count()
+    )
+    number_of_attractions_done = (
+        db.query(models.Done)
+        .filter(
+            models.Done.user_id == user_id,
+        )
+        .count()
+    )
+    number_of_comments_made = (
+        db.query(models.Comments)
+        .filter(
+            models.Comments.user_id == user_id,
+        )
+        .count()
+    )
+    return (
+        number_of_ratings_done
+        + number_of_attractions_liked
+        + number_of_attractions_saved
+        + number_of_attractions_done
+        + number_of_comments_made
     )
 
 

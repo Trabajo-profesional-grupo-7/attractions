@@ -3,6 +3,7 @@ from typing import List
 
 import boto3
 import pandas as pd
+from pysentimiento import create_analyzer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 
@@ -26,7 +27,12 @@ def n_greatest_positions(numbers, n):
     return sorted_indices[:n]
 
 
-def run_recommendation_system(db: Session):
+def get_sentiment(text):
+    analyzer = create_analyzer(task="sentiment", lang="es")
+    return analyzer.predict(text).probas["POS"]
+
+
+def get_merged_df(db: Session):
     df_ratings = pd.DataFrame(
         [row.__dict__ for row in (db.query(models.Ratings).all())],
         columns=["user_id", "attraction_id", "rating", "rated_at"],
@@ -50,21 +56,49 @@ def run_recommendation_system(db: Session):
     )
     df_done["is_done"] = 1
 
+    df_comments = pd.DataFrame(
+        (
+            db.query(
+                models.Comments.user_id,
+                models.Comments.attraction_id,
+                models.Comments.comment,
+            ).all()
+        ),
+        columns=["user_id", "attraction_id", "comment"],
+    )
+
+    df_comments = (
+        df_comments.groupby(["user_id", "attraction_id"])["comment"]
+        .agg(lambda x: " ".join(x))
+        .reset_index()
+    )
+
+    df_comments["sentiment"] = df_comments["comment"].apply(get_sentiment)
+
+    print("df_comments:")
+    print(df_comments)
+
     df = (
         pd.merge(df_ratings, df_likes, on=["user_id", "attraction_id"], how="outer")
         .merge(df_saved, on=["user_id", "attraction_id"], how="outer")
         .merge(df_done, on=["user_id", "attraction_id"], how="outer")
+        .merge(df_comments, on=["user_id", "attraction_id"], how="outer")
     )
 
     df.fillna(0, inplace=True)
 
     df["score"] = (
         0.2 * df["is_liked"]
-        + 0.2 * df["is_saved"]
-        + 0.2 * df["is_done"]
+        + 0.1 * df["is_saved"]
+        + 0.1 * df["is_done"]
         + 0.4 * df["rating"] / 5
+        + 0.2 * df["sentiment"]
     )
+    return df
 
+
+def run_recommendation_system(db: Session):
+    df = get_merged_df(db=db)
     print("df:")
     print(df)
 
@@ -93,7 +127,7 @@ def run_recommendation_system(db: Session):
     for i, user_id in enumerate(matrix.index):
 
         if (
-            crud.number_of_ratings_for_user(db=db, user_id=user_id)
+            crud.number_of_interactions_of_user(db=db, user_id=user_id)
             >= MINIMUM_NUMBER_OF_RATINGS
         ):
 
@@ -147,10 +181,7 @@ def update_recommendations(user_id: int, attractions_ids: List[str]):
 
 
 def get_recommendations_for_user_in_city(db: Session, user_id: int, city: str):
-    df_ratings = pd.DataFrame(
-        [row.__dict__ for row in (db.query(models.Ratings).all())],
-        columns=["user_id", "attraction_id", "rating", "rated_at"],
-    )
+    df = get_merged_df(db=db)
 
     df_attractions = pd.DataFrame(
         (
@@ -164,10 +195,10 @@ def get_recommendations_for_user_in_city(db: Session, user_id: int, city: str):
     )
 
     df_attractions["attraction_id"] = df_attractions["attraction_id"].astype(str)
-    df_ratings["attraction_id"] = df_ratings["attraction_id"].astype(str)
+    df["attraction_id"] = df["attraction_id"].astype(str)
 
     df = pd.merge(
-        df_ratings.reset_index(drop=True),
+        df.reset_index(drop=True),
         df_attractions.reset_index(drop=True),
         on="attraction_id",
         how="inner",

@@ -10,3 +10,10 @@ pytest-mock==3.12.0
 boto3==1.34.73
 pandas==2.2.2
 scikit-learn==1.4.2
+transformers==4.40.2
+pysentimiento==0.7.3
+emoji==1.6.1
+datasets==2.10.1
+torch==2.0.0
+spacy>=3.5.0
+accelerate==0.27.2

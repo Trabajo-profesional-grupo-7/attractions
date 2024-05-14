@@ -249,8 +249,10 @@ def run_recommendation_system(db=Depends(get_db)):
     description="Updates the recommendations for a certain user given preferences and default city",
 )
 def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(get_db)):
+    n = crud.number_of_interactions_of_user(db=db, user_id=request.user_id)
+    Logger().info(f"User {request.user_id} has {n} interactions")
     if (
-        crud.number_of_ratings_for_user(db=db, user_id=request.user_id)
+        crud.number_of_interactions_of_user(db=db, user_id=request.user_id)
         < MINIMUM_NUMBER_OF_RATINGS
     ):
         attractions = []
