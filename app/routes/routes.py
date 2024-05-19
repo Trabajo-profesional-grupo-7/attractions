@@ -5,8 +5,9 @@ from typing import List, Optional
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
+from requests import Session
 
-from app.db import crud
+from app.db import crud, models
 from app.db.database import get_db
 from app.routes import schemas
 from app.services import attractions_service, mappers, recommendations
@@ -14,6 +15,39 @@ from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_RATINGS
 from app.services.logger import Logger
 
 router = APIRouter()
+
+
+# Checks if attraction exists in DB.
+# If it does, it returns it.
+# If it does not, it retrieves the data from external API,
+# adds it to DB and returns it.
+def get_attraction_by_id_and_add_it_if_not_cached(db: Session, attraction_id: str):
+    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=attraction_id)
+
+    if not attraction_db:
+        attraction_db = crud.add_attraction(
+            db=db,
+            attraction_db=attractions_service.get_attraction_by_id(
+                attraction_id=attraction_id
+            ),
+        )
+
+    return attraction_db
+
+
+# Checks if attraction exists in DB.
+# If it does not, it adds it to DB.
+def get_attraction_and_add_it_if_not_cached(
+    db: Session, attraction: models.Attractions
+):
+    attraction_db = crud.get_attraction_by_id(
+        db=db, attraction_id=attraction.attraction_id
+    )
+
+    if not attraction_db:
+        attraction_db = crud.add_attraction(db=db, attraction_db=attraction)
+
+    return attraction_db
 
 
 # ATTRACTIONS
@@ -43,17 +77,9 @@ def get_attraction(
     db=Depends(get_db),
 ):
 
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=attraction_id)
-
-    if not attraction_db:
-        attraction_db = attractions_service.get_attraction_by_id(
-            attraction_id=attraction_id
-        )
-
-        crud.add_attraction(
-            db=db,
-            attraction_db=attraction_db,
-        )
+    attraction_db = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=attraction_id
+    )
 
     if user_id != None:
         return mappers.map_to_attraction_by_user_schema(
@@ -93,17 +119,11 @@ def get_nearby_attractions(
 
     formatted_response = []
 
-    for attraction in attractions:
+    for attraction_db in attractions:
 
-        attraction_db = crud.get_attraction_by_id(
-            db=db, attraction_id=attraction.attraction_id
+        attraction_db = get_attraction_and_add_it_if_not_cached(
+            db=db, attraction=attraction_db
         )
-
-        if not attraction_db:
-            attraction_db = crud.add_attraction(
-                db=db,
-                attraction_db=attraction,
-            )
 
         formatted_response.append(
             mappers.map_to_attraction_schema(attraction_db=attraction_db)
@@ -131,17 +151,11 @@ def search_attractions(
 
     formatted_response = []
 
-    for attraction in attractions:
+    for attraction_db in attractions:
 
-        attraction_db = crud.get_attraction_by_id(
-            db=db, attraction_id=attraction.attraction_id
+        attraction_db = get_attraction_and_add_it_if_not_cached(
+            db=db, attraction=attraction_db
         )
-
-        if not attraction_db:
-            attraction_db = crud.add_attraction(
-                db=db,
-                attraction_db=attraction,
-            )
 
         formatted_response.append(
             mappers.map_to_attraction_schema(attraction_db=attraction_db)
@@ -215,15 +229,9 @@ def get_feed(
     formatted_response = []
 
     for attraction_id in feed:
-        attraction_db = crud.get_attraction_by_id(db=db, attraction_id=attraction_id)
-
-        if not attraction_db:
-            attraction_db = crud.add_attraction(
-                db=db,
-                attraction_db=attractions_service.get_attraction_by_id(
-                    attraction_id=attraction_id
-                ),
-            )
+        attraction_db = get_attraction_by_id_and_add_it_if_not_cached(
+            db=db, attraction_id=attraction_id
+        )
 
         formatted_response.append(
             mappers.map_to_attraction_schema(attraction_db=attraction_db)
@@ -249,8 +257,6 @@ def run_recommendation_system(db=Depends(get_db)):
     description="Updates the recommendations for a certain user given preferences and default city",
 )
 def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(get_db)):
-    n = crud.number_of_interactions_of_user(db=db, user_id=request.user_id)
-    Logger().info(f"User {request.user_id} has {n} interactions")
     if (
         crud.number_of_interactions_of_user(db=db, user_id=request.user_id)
         < MINIMUM_NUMBER_OF_RATINGS
@@ -263,16 +269,8 @@ def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(ge
             ):
                 attractions.append(attraction)
 
-        for attraction in attractions:
-            attraction_db = crud.get_attraction_by_id(
-                db=db, attraction_id=attraction.attraction_id
-            )
-
-            if not attraction_db:
-                attraction_db = crud.add_attraction(
-                    db=db,
-                    attraction_db=attraction,
-                )
+        for attraction_db in attractions:
+            get_attraction_and_add_it_if_not_cached(db=db, attraction=attraction_db)
 
         attractions = sorted(
             attractions,
@@ -298,7 +296,7 @@ def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(ge
     return response
 
 
-@router.put(
+@router.post(
     "/create_plan/",
     status_code=201,
     tags=["Recommendations"],
@@ -309,28 +307,53 @@ def create_plan(
     db=Depends(get_db),
 ):
 
-    attractions_ids = recommendations.get_recommendations_for_user_in_city(
-        db=db, user_id=data.user_id, city=data.city
-    )
+    if (
+        crud.number_of_interactions_of_user(db=db, user_id=data.user_id)
+        >= MINIMUM_NUMBER_OF_RATINGS
+    ):
+
+        Logger().info(msg="USO EL ALGORITMO")
+
+        attractions_ids = recommendations.get_recommendations_for_user_in_city(
+            db=db, user_id=data.user_id, city=data.city
+        )
+
+        formatted_response = []
+
+        for attraction_id in attractions_ids:
+            attraction_db = get_attraction_by_id_and_add_it_if_not_cached(
+                db=db, attraction_id=attraction_id
+            )
+
+            formatted_response.append(
+                mappers.map_to_attraction_schema(attraction_db=attraction_db)
+            )
+
+        return formatted_response
+
+    Logger().info(msg="USO PREFERENCIAS")
+
+    attractions = []
+
+    for preference in data.preferences:
+        for attraction in attractions_service.search_attractions(
+            query=f"{preference} in {data.city}"
+        ):
+            attractions.append(attraction)
 
     formatted_response = []
 
-    for attraction_id in attractions_ids:
-        attraction_db = crud.get_attraction_by_id(db=db, attraction_id=attraction_id)
+    for attraction_db in attractions:
 
-        if not attraction_db:
-            attraction_db = crud.add_attraction(
-                db=db,
-                attraction_db=attractions_service.get_attraction_by_id(
-                    attraction_id=attraction_id
-                ),
-            )
+        attraction_db = get_attraction_and_add_it_if_not_cached(
+            db=db, attraction=attraction_db
+        )
 
         formatted_response.append(
             mappers.map_to_attraction_schema(attraction_db=attraction_db)
         )
 
-    return formatted_response
+    return attractions_service.sort_attractions_by_rating(formatted_response)
 
 
 # SAVE
@@ -343,15 +366,9 @@ def create_plan(
     description="Saves an attraction for a user",
 )
 def save_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=data.attraction_id)
-
-    if not attraction_db:
-        attraction_db = crud.add_attraction(
-            db=db,
-            attraction_db=attractions_service.get_attraction_by_id(
-                attraction_id=data.attraction_id
-            ),
-        )
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     if crud.get_saved_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
@@ -423,15 +440,9 @@ def get_saved_attractions_list(
     description="Likes an attraction for a user",
 )
 def like_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=data.attraction_id)
-
-    if not attraction_db:
-        attraction_db = crud.add_attraction(
-            db=db,
-            attraction_db=attractions_service.get_attraction_by_id(
-                attraction_id=data.attraction_id
-            ),
-        )
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     if crud.get_liked_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
@@ -478,15 +489,9 @@ def unlike_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
     description="Marks as done a attraction for a user",
 )
 def mark_as_done_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_db)):
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=data.attraction_id)
-
-    if not attraction_db:
-        attraction_db = crud.add_attraction(
-            db=db,
-            attraction_db=attractions_service.get_attraction_by_id(
-                attraction_id=data.attraction_id
-            ),
-        )
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     if crud.get_done_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
@@ -571,15 +576,9 @@ def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
             },
         )
 
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=data.attraction_id)
-
-    if not attraction_db:
-        attraction_db = crud.add_attraction(
-            db=db,
-            attraction_db=attractions_service.get_attraction_by_id(
-                attraction_id=data.attraction_id
-            ),
-        )
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     rating = crud.get_rating(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
@@ -606,15 +605,9 @@ def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
     description="Comments an attraction for an user",
 )
 def comment_attraction(data: schemas.AddComment, db=Depends(get_db)):
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=data.attraction_id)
-
-    if not attraction_db:
-        attraction_db = crud.add_attraction(
-            db=db,
-            attraction_db=attractions_service.get_attraction_by_id(
-                attraction_id=data.attraction_id
-            ),
-        )
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     return crud.add_comment(
         db=db,
@@ -632,6 +625,7 @@ def comment_attraction(data: schemas.AddComment, db=Depends(get_db)):
 )
 def delete_comment(data: schemas.DeleteComment, db=Depends(get_db)):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
+
     if not comment:
         Logger().info("Comment not found")
         raise HTTPException(
@@ -651,6 +645,7 @@ def update_comment(
     db=Depends(get_db),
 ):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
+
     if not comment:
         Logger().info("Comment not found")
         raise HTTPException(
@@ -681,15 +676,9 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
             },
         )
 
-    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=data.attraction_id)
-
-    if not attraction_db:
-        attraction_db = crud.add_attraction(
-            db=db,
-            attraction_db=attractions_service.get_attraction_by_id(
-                attraction_id=data.attraction_id
-            ),
-        )
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     if not crud.check_if_schedule_is_valid(
         db=db,
@@ -750,15 +739,17 @@ def get_scheduled_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    attractions = crud.get_user_scheduled_list(
+    attractions, days = crud.get_user_scheduled_list(
         db=db, user_id=user_id, page=page, size=size
     )
 
     formatted_response = []
 
-    for attraction_db in attractions:
+    for i, attraction_db in enumerate(attractions):
         formatted_response.append(
-            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+            mappers.map_to_scheduled_attraction_schema(
+                attraction_db=attraction_db, scheduled_day=days[i]
+            )
         )
     return formatted_response
 

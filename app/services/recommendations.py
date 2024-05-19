@@ -34,25 +34,27 @@ def get_sentiment(text):
 
 def get_merged_df(db: Session):
     df_ratings = pd.DataFrame(
-        [row.__dict__ for row in (db.query(models.Ratings).all())],
-        columns=["user_id", "attraction_id", "rating", "rated_at"],
+        db.query(
+            models.Ratings.user_id, models.Ratings.attraction_id, models.Ratings.rating
+        ).all(),
+        columns=["user_id", "attraction_id", "rating"],
     )
 
     df_likes = pd.DataFrame(
-        [row.__dict__ for row in (db.query(models.Likes).all())],
-        columns=["user_id", "attraction_id", "liked_at"],
+        db.query(models.Likes.user_id, models.Likes.attraction_id).all(),
+        columns=["user_id", "attraction_id"],
     )
     df_likes["is_liked"] = 1
 
     df_saved = pd.DataFrame(
-        [row.__dict__ for row in (db.query(models.Saved).all())],
-        columns=["user_id", "attraction_id", "saved_at"],
+        db.query(models.Saved.user_id, models.Saved.attraction_id).all(),
+        columns=["user_id", "attraction_id"],
     )
     df_saved["is_saved"] = 1
 
     df_done = pd.DataFrame(
-        [row.__dict__ for row in (db.query(models.Done).all())],
-        columns=["user_id", "attraction_id", "done_at"],
+        db.query(models.Done.user_id, models.Done.attraction_id).all(),
+        columns=["user_id", "attraction_id"],
     )
     df_done["is_done"] = 1
 
@@ -75,9 +77,6 @@ def get_merged_df(db: Session):
 
     df_comments["sentiment"] = df_comments["comment"].apply(get_sentiment)
 
-    print("df_comments:")
-    print(df_comments)
-
     df = (
         pd.merge(df_ratings, df_likes, on=["user_id", "attraction_id"], how="outer")
         .merge(df_saved, on=["user_id", "attraction_id"], how="outer")
@@ -99,16 +98,12 @@ def get_merged_df(db: Session):
 
 def run_recommendation_system(db: Session):
     df = get_merged_df(db=db)
-    print("df:")
-    print(df)
 
     # Matriz usuarios-atracciones
     matrix = df.pivot(index="user_id", columns="attraction_id", values="score")
 
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
-    print("\nMatriz:")
-    print(matrix)
 
     session = boto3.Session(
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
@@ -122,8 +117,6 @@ def run_recommendation_system(db: Session):
 
     user_similarity = cosine_similarity(matrix)
 
-    print(user_similarity)
-
     for i, user_id in enumerate(matrix.index):
 
         if (
@@ -131,27 +124,18 @@ def run_recommendation_system(db: Session):
             >= MINIMUM_NUMBER_OF_RATINGS
         ):
 
-            print(f"Se calcula para {user_id}")
-
             # Se obtienen las posiciones de los usuarios más cercanos
             # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
             positions = n_greatest_positions(user_similarity[i], N_RECOMMENDATIONS + 1)
-            print("\nPositions:")
-            print(positions)
 
             # se filtra a la matriz dejando solamente a los usuarios cercanos
             filtered_matrix = matrix.iloc[positions]
             if user_id in filtered_matrix.index:
                 filtered_matrix = filtered_matrix.drop(user_id, axis=0)
 
-            print("\nMatriz filtrada:")
-            print(filtered_matrix)
-
             recommendations = (
                 filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
             )
-            print("\nRecomendaciones:")
-            print(recommendations)
 
             item_data = {
                 "user_id": user_id,
@@ -204,37 +188,23 @@ def get_recommendations_for_user_in_city(db: Session, user_id: int, city: str):
         how="inner",
     )
 
-    print("df:")
-    print(df)
-
     # Matriz usuarios-atracciones
     matrix = df.pivot(index="user_id", columns="attraction_id", values="rating")
 
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
-    print("\nMatriz:")
-    print(matrix)
 
     user_similarity = cosine_similarity([matrix.loc[user_id]], matrix)
-
-    print(user_similarity)
 
     # Se obtienen las posiciones de los usuarios más cercanos
     # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
     positions = n_greatest_positions(user_similarity, N_RECOMMENDATIONS + 1)
-    print("\nPositions:")
-    print(positions)
 
     # se filtra a la matriz dejando solamente a los usuarios cercanos
     filtered_matrix = matrix.iloc[positions]
     if user_id in filtered_matrix.index:
         filtered_matrix = filtered_matrix.drop(user_id, axis=0)
 
-    print("\nMatriz filtrada:")
-    print(filtered_matrix)
-
     recommendations = filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
-    print("\nRecomendaciones:")
-    print(recommendations)
 
     return recommendations

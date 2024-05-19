@@ -107,6 +107,19 @@ class Attraction(BaseModel):
     types: List[str] = []
 
 
+class ScheduledAttraction(BaseModel):
+    attraction_id: str
+    attraction_name: str
+    city: Optional[str] = None
+    country: Optional[str] = None
+    location: Optional[Location] = None
+    photo: Optional[str] = None
+    avg_rating: Optional[float] = None
+    liked_count: int = 0
+    types: List[str] = []
+    scheduled_day: datetime
+
+
 class UpdateRecommendations(BaseModel):
     user_id: int
     default_city: str
@@ -116,3 +129,4 @@ class UpdateRecommendations(BaseModel):
 class CreatePlan(BaseModel):
     user_id: int
     city: str
+    preferences: List[str] = []

@@ -75,5 +75,5 @@ class Scheduled(Base):
     schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(String)
-    day = Column(Date)
+    day = Column(DateTime)
     scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)

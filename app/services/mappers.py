@@ -1,6 +1,7 @@
 import json
 import os
 
+from sqlalchemy import DateTime
 from sqlalchemy.orm import Session
 
 from app.db import crud, models
@@ -21,6 +22,34 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
         photo=attraction_db.photo,
         liked_count=attraction_db.likes_count,
         types=json.loads(attraction_db.types),
+    )
+
+    if attraction_db.rating_count > 0:
+        attraction_schema.avg_rating = (
+            attraction_db.rating_total / attraction_db.rating_count
+        )
+    else:
+        attraction_schema.avg_rating = attraction_db.external_rating
+
+    return attraction_schema
+
+
+def map_to_scheduled_attraction_schema(
+    attraction_db: models.Attractions, scheduled_day: DateTime
+) -> schemas.ScheduledAttraction:
+
+    attraction_schema = schemas.ScheduledAttraction(
+        attraction_id=attraction_db.attraction_id,
+        attraction_name=attraction_db.attraction_name,
+        location=schemas.Location(
+            latitude=attraction_db.latitude, longitude=attraction_db.longitude
+        ),
+        country=attraction_db.country,
+        city=attraction_db.city,
+        photo=attraction_db.photo,
+        liked_count=attraction_db.likes_count,
+        types=json.loads(attraction_db.types),
+        scheduled_day=scheduled_day,
     )
 
     if attraction_db.rating_count > 0:

@@ -477,4 +477,4 @@ def get_user_scheduled_list(db: Session, user_id: int, page: int, size: int):
 
     return get_attractions_by_ids(
         db=db, attractions_ids=[x.attraction_id for x in scheduled_list]
-    )
+    ), [x.day for x in scheduled_list]
