@@ -343,15 +343,21 @@ def create_plan(
 
     formatted_response = []
 
+    attractions_names = set()
+
     for attraction_db in attractions:
 
         attraction_db = get_attraction_and_add_it_if_not_cached(
             db=db, attraction=attraction_db
         )
 
-        formatted_response.append(
-            mappers.map_to_attraction_schema(attraction_db=attraction_db)
-        )
+        if attraction_db.attraction_name not in attractions_names:
+
+            formatted_response.append(
+                mappers.map_to_attraction_schema(attraction_db=attraction_db)
+            )
+
+            attractions_names.add(attraction_db.attraction_name)
 
     return attractions_service.sort_attractions_by_rating(formatted_response)
 
