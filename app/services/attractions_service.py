@@ -55,7 +55,7 @@ def get_nearby_attractions(
 
     data = {
         "includedTypes": attraction_types,
-        "maxResultCount": 10,
+        "maxResultCount": 20,
         "locationRestriction": {
             "circle": {
                 "center": {"latitude": latitude, "longitude": longitude},
