@@ -31,6 +31,13 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
     else:
         attraction_schema.avg_rating = attraction_db.external_rating
 
+    if attraction_db.editorialSummary:
+        attraction_schema.editorialSummary = attraction_db.editorialSummary
+    if attraction_db.formattedAddress:
+        attraction_schema.formattedAddress = attraction_db.formattedAddress
+    if attraction_db.googleMapsUri:
+        attraction_schema.googleMapsUri = attraction_db.googleMapsUri
+
     return attraction_schema
 
 
@@ -58,6 +65,13 @@ def map_to_scheduled_attraction_schema(
         )
     else:
         attraction_schema.avg_rating = attraction_db.external_rating
+
+    if attraction_db.editorialSummary:
+        attraction_schema.editorialSummary = attraction_db.editorialSummary
+    if attraction_db.formattedAddress:
+        attraction_schema.formattedAddress = attraction_db.formattedAddress
+    if attraction_db.googleMapsUri:
+        attraction_schema.googleMapsUri = attraction_db.googleMapsUri
 
     return attraction_schema
 
@@ -117,6 +131,13 @@ def map_to_attraction_by_user_schema(
     else:
         attraction_by_user_schema.avg_rating = attraction_db.external_rating
 
+    if attraction_db.editorialSummary:
+        attraction_by_user_schema.editorialSummary = attraction_db.editorialSummary
+    if attraction_db.formattedAddress:
+        attraction_by_user_schema.formattedAddress = attraction_db.formattedAddress
+    if attraction_db.googleMapsUri:
+        attraction_by_user_schema.googleMapsUri = attraction_db.googleMapsUri
+
     return attraction_by_user_schema
 
 
@@ -147,5 +168,14 @@ def map_to_attraction_db(attraction: dict) -> models.Attractions:
 
     if "rating" in attraction.keys():
         attraction_db.external_rating = attraction["rating"]
+
+    if "formattedAddress" in attraction.keys():
+        attraction_db.formattedAddress = attraction["formattedAddress"]
+
+    if "googleMapsUri" in attraction.keys():
+        attraction_db.googleMapsUri = attraction["googleMapsUri"]
+
+    if "editorialSummary" in attraction.keys():
+        attraction_db.editorialSummary = attraction["editorialSummary"]["text"]
 
     return attraction_db

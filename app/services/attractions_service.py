@@ -25,7 +25,7 @@ def get_attraction_by_id(attraction_id: str) -> dict:
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "displayName,id,addressComponents,photos,location,types,rating",
+        "X-Goog-FieldMask": "displayName,id,addressComponents,photos,location,types,rating,formattedAddress,googleMapsUri,editorialSummary",
     }
 
     response = requests.get(url, headers=headers)
@@ -50,7 +50,7 @@ def get_nearby_attractions(
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location,places.types,places.rating",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location,places.types,places.rating,places.formattedAddress,places.googleMapsUri,places.editorialSummary",
     }
 
     data = {
@@ -93,7 +93,7 @@ def search_attractions(query: str, type=None, latitude=None, longitude=None):
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location,places.types,places.rating",
+        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos,places.location,places.types,places.rating,places.formattedAddress,places.googleMapsUri,places.editorialSummary",
     }
 
     if latitude and longitude:

@@ -68,6 +68,9 @@ class Attractions(Base):
     scheduled_count = Column(Integer, default=0)
     types = Column(String, default=[])
     external_rating = Column(Float, default=None)
+    formattedAddress = Column(String, default=None)
+    googleMapsUri = Column(String, default=None)
+    editorialSummary = Column(String, default=None)
 
 
 class Scheduled(Base):

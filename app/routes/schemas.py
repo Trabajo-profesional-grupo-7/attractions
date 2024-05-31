@@ -93,6 +93,9 @@ class AttractionByUser(BaseModel):
     user_rating: int = None
     is_done: bool = False
     types: List[str] = []
+    formattedAddress: str = None
+    googleMapsUri: str = None
+    editorialSummary: str = None
 
 
 class Attraction(BaseModel):
@@ -105,6 +108,9 @@ class Attraction(BaseModel):
     avg_rating: Optional[float] = None
     liked_count: int = 0
     types: List[str] = []
+    formattedAddress: str = None
+    googleMapsUri: str = None
+    editorialSummary: str = None
 
 
 class ScheduledAttraction(BaseModel):
@@ -118,6 +124,9 @@ class ScheduledAttraction(BaseModel):
     liked_count: int = 0
     types: List[str] = []
     scheduled_day: datetime
+    formattedAddress: str = None
+    googleMapsUri: str = None
+    editorialSummary: str = None
 
 
 class UpdateRecommendations(BaseModel):
