@@ -67,6 +67,7 @@ class Comment(BaseModel):
     comment_id: int
     user_id: int
     comment: str
+    user_name: str
 
 
 class Location(BaseModel):
@@ -78,7 +79,7 @@ class AttractionsFilter(BaseModel):
     attraction_types: Optional[List[str]] = None
 
 
-class AttractionByUser(BaseModel):
+class AttractionWithCommentsByUser(BaseModel):
     attraction_id: str
     attraction_name: str
     city: Optional[str] = None
@@ -87,15 +88,15 @@ class AttractionByUser(BaseModel):
     photo: Optional[str] = None
     avg_rating: Optional[float] = None
     liked_count: int = 0
-    comments: List[Comment] = []
-    is_liked: bool = False
-    is_saved: bool = False
-    user_rating: int = None
-    is_done: bool = False
     types: List[str] = []
     formattedAddress: str = None
     googleMapsUri: str = None
     editorialSummary: str = None
+    is_liked: bool = False
+    is_saved: bool = False
+    user_rating: int = None
+    is_done: bool = False
+    comments: List[Comment] = []
 
 
 class Attraction(BaseModel):
@@ -111,6 +112,22 @@ class Attraction(BaseModel):
     formattedAddress: str = None
     googleMapsUri: str = None
     editorialSummary: str = None
+
+
+class AttractionWithComments(BaseModel):
+    attraction_id: str
+    attraction_name: str
+    city: Optional[str] = None
+    country: Optional[str] = None
+    location: Optional[Location] = None
+    photo: Optional[str] = None
+    avg_rating: Optional[float] = None
+    liked_count: int = 0
+    types: List[str] = []
+    formattedAddress: str = None
+    googleMapsUri: str = None
+    editorialSummary: str = None
+    comments: List[Comment] = []
 
 
 class ScheduledAttraction(BaseModel):

@@ -82,11 +82,13 @@ def get_attraction(
     )
 
     if user_id != None:
-        return mappers.map_to_attraction_by_user_schema(
+        return mappers.map_to_attraction_with_comments_by_user_schema(
             db=db, attraction_db=attraction_db, user_id=user_id
         )
 
-    return mappers.map_to_attraction_schema(attraction_db=attraction_db)
+    return mappers.map_to_attraction_schema_with_comments(
+        db=db, attraction_db=attraction_db
+    )
 
 
 @router.post(

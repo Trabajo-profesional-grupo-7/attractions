@@ -1,12 +1,31 @@
 import json
 import os
 
+import requests
+from fastapi import HTTPException
 from sqlalchemy import DateTime
 from sqlalchemy.orm import Session
 
 from app.db import crud, models
 from app.routes import schemas
 from app.services.constants import ATTRACTION_TYPES
+
+
+def get_user_name(user_id: int):
+    url = f"https://users-0x8y.onrender.com/users/{user_id}"
+
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": f"External API error: {response.status_code}",
+            },
+        )
+    print(json.loads(response.content))
+    return json.loads(response.content)["username"]
 
 
 def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attraction:
@@ -37,6 +56,55 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
         attraction_schema.formattedAddress = attraction_db.formattedAddress
     if attraction_db.googleMapsUri:
         attraction_schema.googleMapsUri = attraction_db.googleMapsUri
+
+    return attraction_schema
+
+
+def map_to_attraction_schema_with_comments(
+    db: Session, attraction_db: models.Attractions
+) -> schemas.Attraction:
+
+    attraction_schema = schemas.AttractionWithComments(
+        attraction_id=attraction_db.attraction_id,
+        attraction_name=attraction_db.attraction_name,
+        location=schemas.Location(
+            latitude=attraction_db.latitude, longitude=attraction_db.longitude
+        ),
+        country=attraction_db.country,
+        city=attraction_db.city,
+        photo=attraction_db.photo,
+        liked_count=attraction_db.likes_count,
+        types=json.loads(attraction_db.types),
+    )
+
+    if attraction_db.rating_count > 0:
+        attraction_schema.avg_rating = (
+            attraction_db.rating_total / attraction_db.rating_count
+        )
+    else:
+        attraction_schema.avg_rating = attraction_db.external_rating
+
+    if attraction_db.editorialSummary:
+        attraction_schema.editorialSummary = attraction_db.editorialSummary
+    if attraction_db.formattedAddress:
+        attraction_schema.formattedAddress = attraction_db.formattedAddress
+    if attraction_db.googleMapsUri:
+        attraction_schema.googleMapsUri = attraction_db.googleMapsUri
+
+    comments = crud.get_attraction_comments(
+        db=db, attraction_id=attraction_db.attraction_id
+    )
+    if comments:
+        for comment in comments:
+            user_name = get_user_name(user_id=comment.user_id)
+            attraction_schema.comments.append(
+                schemas.Comment(
+                    comment_id=comment.comment_id,
+                    user_id=comment.user_id,
+                    comment=comment.comment,
+                    user_name=user_name,
+                )
+            )
 
     return attraction_schema
 
@@ -76,13 +144,13 @@ def map_to_scheduled_attraction_schema(
     return attraction_schema
 
 
-def map_to_attraction_by_user_schema(
+def map_to_attraction_with_comments_by_user_schema(
     db: Session, attraction_db: models.Attractions, user_id: int
-) -> schemas.AttractionByUser:
+) -> schemas.AttractionWithCommentsByUser:
 
     attraction_id = attraction_db.attraction_id
 
-    attraction_by_user_schema = schemas.AttractionByUser(
+    attraction_by_user_schema = schemas.AttractionWithCommentsByUser(
         attraction_id=attraction_id,
         attraction_name=attraction_db.attraction_name,
         location=schemas.Location(
@@ -100,11 +168,13 @@ def map_to_attraction_by_user_schema(
     )
     if comments:
         for comment in comments:
+            user_name = get_user_name(user_id=comment.user_id)
             attraction_by_user_schema.comments.append(
                 schemas.Comment(
                     comment_id=comment.comment_id,
                     user_id=comment.user_id,
                     comment=comment.comment,
+                    user_name=user_name,
                 )
             )
 
