@@ -89,9 +89,9 @@ class AttractionWithCommentsByUser(BaseModel):
     avg_rating: Optional[float] = None
     liked_count: int = 0
     types: List[str] = []
-    formattedAddress: str = None
-    googleMapsUri: str = None
-    editorialSummary: str = None
+    formatted_address: str = None
+    google_maps_uri: str = None
+    editorial_summary: str = None
     is_liked: bool = False
     is_saved: bool = False
     user_rating: int = None
@@ -109,9 +109,9 @@ class Attraction(BaseModel):
     avg_rating: Optional[float] = None
     liked_count: int = 0
     types: List[str] = []
-    formattedAddress: str = None
-    googleMapsUri: str = None
-    editorialSummary: str = None
+    formatted_address: str = None
+    google_maps_uri: str = None
+    editorial_summary: str = None
 
 
 class AttractionWithComments(BaseModel):
@@ -124,9 +124,9 @@ class AttractionWithComments(BaseModel):
     avg_rating: Optional[float] = None
     liked_count: int = 0
     types: List[str] = []
-    formattedAddress: str = None
-    googleMapsUri: str = None
-    editorialSummary: str = None
+    formatted_address: str = None
+    google_maps_uri: str = None
+    editorial_summary: str = None
     comments: List[Comment] = []
 
 
@@ -141,9 +141,9 @@ class ScheduledAttraction(BaseModel):
     liked_count: int = 0
     types: List[str] = []
     scheduled_day: datetime
-    formattedAddress: str = None
-    googleMapsUri: str = None
-    editorialSummary: str = None
+    formatted_address: str = None
+    google_maps_uri: str = None
+    editorial_summary: str = None
 
 
 class UpdateRecommendations(BaseModel):

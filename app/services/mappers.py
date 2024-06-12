@@ -51,11 +51,11 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
         attraction_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
-        attraction_schema.editorialSummary = attraction_db.editorialSummary
+        attraction_schema.editorial_summary = attraction_db.editorialSummary
     if attraction_db.formattedAddress:
-        attraction_schema.formattedAddress = attraction_db.formattedAddress
+        attraction_schema.formatted_address = attraction_db.formattedAddress
     if attraction_db.googleMapsUri:
-        attraction_schema.googleMapsUri = attraction_db.googleMapsUri
+        attraction_schema.google_maps_uri = attraction_db.googleMapsUri
 
     return attraction_schema
 
@@ -85,11 +85,11 @@ def map_to_attraction_schema_with_comments(
         attraction_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
-        attraction_schema.editorialSummary = attraction_db.editorialSummary
+        attraction_schema.editorial_summary = attraction_db.editorialSummary
     if attraction_db.formattedAddress:
-        attraction_schema.formattedAddress = attraction_db.formattedAddress
+        attraction_schema.formatted_address = attraction_db.formattedAddress
     if attraction_db.googleMapsUri:
-        attraction_schema.googleMapsUri = attraction_db.googleMapsUri
+        attraction_schema.google_maps_uri = attraction_db.googleMapsUri
 
     comments = crud.get_attraction_comments(
         db=db, attraction_id=attraction_db.attraction_id
@@ -135,11 +135,11 @@ def map_to_scheduled_attraction_schema(
         attraction_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
-        attraction_schema.editorialSummary = attraction_db.editorialSummary
+        attraction_schema.editorial_summary = attraction_db.editorialSummary
     if attraction_db.formattedAddress:
-        attraction_schema.formattedAddress = attraction_db.formattedAddress
+        attraction_schema.formatted_address = attraction_db.formattedAddress
     if attraction_db.googleMapsUri:
-        attraction_schema.googleMapsUri = attraction_db.googleMapsUri
+        attraction_schema.google_maps_uri = attraction_db.googleMapsUri
 
     return attraction_schema
 
@@ -202,11 +202,11 @@ def map_to_attraction_with_comments_by_user_schema(
         attraction_by_user_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
-        attraction_by_user_schema.editorialSummary = attraction_db.editorialSummary
+        attraction_by_user_schema.editorial_summary = attraction_db.editorialSummary
     if attraction_db.formattedAddress:
-        attraction_by_user_schema.formattedAddress = attraction_db.formattedAddress
+        attraction_by_user_schema.formatted_address = attraction_db.formattedAddress
     if attraction_db.googleMapsUri:
-        attraction_by_user_schema.googleMapsUri = attraction_db.googleMapsUri
+        attraction_by_user_schema.google_maps_uri = attraction_db.googleMapsUri
 
     return attraction_by_user_schema
 
