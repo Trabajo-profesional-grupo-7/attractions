@@ -3,12 +3,15 @@ from typing import List
 
 import boto3
 import pandas as pd
+from botocore.config import Config
 from pysentimiento import create_analyzer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 
 from app.db import crud
+from app.db.database import get_db_session
 from app.services.constants import MINIMUM_NUMBER_OF_RATINGS
+from app.services.logger import Logger
 
 from ..db import models
 
@@ -69,6 +72,8 @@ def get_merged_df(db: Session):
         columns=["user_id", "attraction_id", "comment"],
     )
 
+    db.close()
+
     df_comments = (
         df_comments.groupby(["user_id", "attraction_id"])["comment"]
         .agg(lambda x: " ".join(x))
@@ -76,6 +81,8 @@ def get_merged_df(db: Session):
     )
 
     df_comments["sentiment"] = df_comments["comment"].apply(get_sentiment)
+
+    Logger().info(msg=f"Start merging dfs")
 
     df = (
         pd.merge(df_ratings, df_likes, on=["user_id", "attraction_id"], how="outer")
@@ -105,6 +112,12 @@ def run_recommendation_system(db: Session):
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
 
+    Logger().info(msg=f"Start calculating the cosine similarity matrix")
+
+    user_similarity = cosine_similarity(matrix)
+
+    db = get_db_session()
+
     session = boto3.Session(
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
@@ -115,9 +128,8 @@ def run_recommendation_system(db: Session):
     table_name = "recommendations"
     table = dynamodb.Table(table_name)
 
-    user_similarity = cosine_similarity(matrix)
-
     for i, user_id in enumerate(matrix.index):
+        Logger().info(msg=f"Processing user {user_id}")
 
         if (
             crud.number_of_interactions_of_user(db=db, user_id=user_id)
