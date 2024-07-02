@@ -194,25 +194,6 @@ def get_attraction_location(text: str):
     return response.json()
 
 
-@router.post(
-    "/attractions/autocomplete",
-    status_code=201,
-    tags=["Get Attractions"],
-    description="Returns attractions predictions given a substring. Can optionally filter by a list of attraction types.",
-)
-def autocomplete_attractions(
-    data: schemas.AutocompleteAttractions,
-    attraction_types: List[str] = Query(
-        None,
-        title="Attraction Types",
-        description="Filter by attraction types",
-    ),
-):
-    return attractions_service.autocomplete(
-        query=data.query, attraction_types=attraction_types
-    )
-
-
 @router.get(
     "/attractions/recommendations/{user_id}",
     status_code=200,
