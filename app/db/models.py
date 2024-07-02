@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import CheckConstraint, Column, Date, DateTime, Float, Integer, String
+from sqlalchemy import CheckConstraint, Column, DateTime, Float, Index, Integer, String
 
 from .database import Base
 
@@ -56,7 +56,7 @@ class Attractions(Base):
     attraction_id = Column(String, primary_key=True)
     attraction_name = Column(String)
     country = Column(String)
-    city = Column(String)
+    city = Column(String, index=True)
     latitude = Column(Float)
     longitude = Column(Float)
     photo = Column(String)
