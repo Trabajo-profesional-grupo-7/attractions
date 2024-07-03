@@ -3,7 +3,6 @@ from typing import List
 
 import boto3
 import pandas as pd
-from botocore.config import Config
 from pysentimiento import create_analyzer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
@@ -32,7 +31,32 @@ def n_greatest_positions(numbers, n):
 
 def get_sentiment(text):
     analyzer = create_analyzer(task="sentiment", lang="es")
-    return analyzer.predict(text).probas["POS"]
+    prediction = analyzer.predict(text).probas
+    positive, negative, neutral = (
+        prediction["POS"],
+        prediction["NEG"],
+        prediction["NEU"],
+    )
+
+    if positive > negative and positive > neutral:
+        return positive
+    elif negative > positive and negative > neutral:
+        return negative
+    else:
+        return 0
+
+
+def create_rating_score(rating: int):
+    if rating == 1:
+        return -1
+    elif rating == 2:
+        return -0.5
+    elif rating == 3:
+        return 0.1
+    elif rating == 4:
+        return 0.5
+    elif rating == 5:
+        return 1
 
 
 def get_merged_df(db: Session):
@@ -94,11 +118,11 @@ def get_merged_df(db: Session):
     df.fillna(0, inplace=True)
 
     df["score"] = (
-        0.2 * df["is_liked"]
-        + 0.1 * df["is_saved"]
+        0.5 * df["is_liked"]
+        + 0.5 * df["is_saved"]
         + 0.1 * df["is_done"]
-        + 0.4 * df["rating"] / 5
-        + 0.2 * df["sentiment"]
+        + df["rating"].apply(create_rating_score)
+        + df["sentiment"]
     )
     return df
 
