@@ -12,7 +12,7 @@ from app.services.constants import ATTRACTION_TYPES
 
 
 def get_user_name(user_id: int):
-    url = f"https://users-0x8y.onrender.com/users/{user_id}"
+    url = f"{os.getenv('USERS_URL')}/{user_id}"
 
     response = requests.get(url)
 
@@ -24,7 +24,6 @@ def get_user_name(user_id: int):
                 "message": f"External API error: {response.status_code}",
             },
         )
-    print(json.loads(response.content))
     return json.loads(response.content)["username"]
 
 
