@@ -2,6 +2,7 @@ import datetime
 from datetime import date
 from typing import List
 
+import pandas as pd
 from sqlalchemy.orm import Session
 
 from . import models
@@ -297,48 +298,103 @@ def get_user_rating(db: Session, attraction_id: str, user_id: int):
     return user_rating.rating
 
 
-def number_of_interactions_of_user(db: Session, user_id: int):
-    number_of_ratings_done = (
-        db.query(models.Ratings)
-        .filter(
-            models.Ratings.user_id == user_id,
-        )
-        .count()
+def number_of_interactions_of_user(db: Session, user_id: int, city=None):
+    df_ratings = db.query(
+        models.Ratings.user_id,
+        models.Ratings.attraction_id,
+    ).filter(
+        models.Ratings.user_id == user_id,
     )
-    number_of_attractions_liked = (
-        db.query(models.Likes)
-        .filter(
-            models.Likes.user_id == user_id,
-        )
-        .count()
+    df_likes = db.query(models.Likes.user_id, models.Likes.attraction_id).filter(
+        models.Likes.user_id == user_id,
     )
-    number_of_attractions_saved = (
-        db.query(models.Saved)
-        .filter(
-            models.Saved.user_id == user_id,
-        )
-        .count()
+    df_saved = db.query(models.Saved.user_id, models.Saved.user_id).filter(
+        models.Saved.user_id == user_id,
     )
-    number_of_attractions_done = (
-        db.query(models.Done)
-        .filter(
-            models.Done.user_id == user_id,
-        )
-        .count()
+    df_done = db.query(models.Done.user_id, models.Done.attraction_id).filter(
+        models.Done.user_id == user_id,
     )
-    number_of_comments_made = (
-        db.query(models.Comments)
-        .filter(
-            models.Comments.user_id == user_id,
-        )
-        .count()
+    df_comments = db.query(
+        models.Comments.user_id, models.Comments.attraction_id
+    ).filter(
+        models.Comments.user_id == user_id,
     )
+
+    if city:
+        df_attractions = pd.DataFrame(
+            (
+                db.query(models.Attractions.attraction_id, models.Attractions.city)
+                .filter(
+                    models.Attractions.city == city,
+                )
+                .all()
+            ),
+            columns=["attraction_id", "city"],
+        )
+
+        df_ratings = pd.DataFrame(
+            df_ratings.all(), columns=["user_id", "attraction_id"]
+        )
+        df_ratings["attraction_id"] = df_ratings["attraction_id"].astype(str)
+        df_ratings = pd.merge(
+            df_attractions,
+            df_ratings,
+            on=["attraction_id"],
+            how="inner",
+        )
+
+        df_likes = pd.DataFrame(df_likes.all(), columns=["user_id", "attraction_id"])
+        df_likes["attraction_id"] = df_likes["attraction_id"].astype(str)
+        df_likes = pd.merge(
+            df_attractions,
+            df_likes,
+            on=["attraction_id"],
+            how="inner",
+        )
+
+        df_saved = pd.DataFrame(df_saved.all(), columns=["user_id", "attraction_id"])
+        df_saved["attraction_id"] = df_saved["attraction_id"].astype(str)
+        df_saved = pd.merge(
+            df_attractions,
+            df_saved,
+            on=["attraction_id"],
+            how="inner",
+        )
+
+        df_done = pd.DataFrame(df_done.all(), columns=["user_id", "attraction_id"])
+        df_done["attraction_id"] = df_done["attraction_id"].astype(str)
+        df_done = pd.merge(
+            df_attractions,
+            df_done,
+            on=["attraction_id"],
+            how="inner",
+        )
+
+        df_comments = pd.DataFrame(
+            df_comments.all(), columns=["user_id", "attraction_id"]
+        )
+        df_comments["attraction_id"] = df_comments["attraction_id"].astype(str)
+        df_comments = pd.merge(
+            df_attractions,
+            df_comments,
+            on=["attraction_id"],
+            how="inner",
+        )
+
+        return (
+            df_ratings.shape[0]
+            + df_likes.shape[0]
+            + df_saved.shape[0]
+            + df_done.shape[0]
+            + df_comments.shape[0]
+        )
+
     return (
-        number_of_ratings_done
-        + number_of_attractions_liked
-        + number_of_attractions_saved
-        + number_of_attractions_done
-        + number_of_comments_made
+        df_ratings.count()
+        + df_likes.count()
+        + df_saved.count()
+        + df_done.count()
+        + df_comments.count()
     )
 
 

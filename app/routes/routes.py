@@ -293,7 +293,7 @@ def create_plan(
     Logger().info(msg="Inicia el endpoint")
 
     if (
-        crud.number_of_interactions_of_user(db=db, user_id=data.user_id)
+        crud.number_of_interactions_of_user(db=db, user_id=data.user_id, city=data.city)
         >= MINIMUM_NUMBER_OF_RATINGS
     ):
 
