@@ -17,9 +17,6 @@ from app.services.logger import Logger
 
 from ..db import models
 
-# warnings.filterwarnings("ignore")
-
-
 # Cantidad de atracciones que se quieren recomendar
 N_RECOMMENDATIONS = 20
 
@@ -117,17 +114,9 @@ def get_merged_df(db: Session):
     db.close()
 
     Logger().debug(msg=f"Agrupa los comentarios por usuario")
-    df_comments = (
-        df_comments.groupby(["user_id", "attraction_id"]).agg(
-            {"sentiment_metric": "mean"}
-        )
-        # .reset_index()
+    df_comments = df_comments.groupby(["user_id", "attraction_id"]).agg(
+        {"sentiment_metric": "mean"}
     )
-
-    print(df_comments.head(10))
-
-    # Logger().debug(msg=f"Start sentiment analysis")
-    # df_comments["sentiment"] = df_comments["comment"].apply(get_sentiment)
 
     Logger().debug(msg=f"Start merging dfs")
 

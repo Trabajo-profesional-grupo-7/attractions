@@ -333,15 +333,6 @@ def number_of_interactions_of_user(db: Session, user_id: int):
         )
         .count()
     )
-    print(
-        (
-            number_of_ratings_done
-            + number_of_attractions_liked
-            + number_of_attractions_saved
-            + number_of_attractions_done
-            + number_of_comments_made
-        )
-    )
     return (
         number_of_ratings_done
         + number_of_attractions_liked
