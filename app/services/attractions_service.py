@@ -18,8 +18,6 @@ def sort_attractions_by_rating(attractions):
 
 
 def get_attraction_by_id(attraction_id: str) -> dict:
-    Logger().info("API CALL!")
-
     url = f"https://places.googleapis.com/v1/places/{attraction_id}"
 
     headers = {
