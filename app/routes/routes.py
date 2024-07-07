@@ -280,22 +280,26 @@ def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(ge
 
 
 @router.post(
-    "/create_plan/",
+    "/create_plan",
     status_code=201,
     tags=["Recommendations"],
     description="Returns recommended attractions to visit a city for a certain user",
 )
 def create_plan(
     data: schemas.CreatePlan,
-    db=Depends(get_db),
+    db: Session = Depends(get_db),
 ):
+
+    Logger().info(msg="Inicia el endpoint")
 
     if (
         crud.number_of_interactions_of_user(db=db, user_id=data.user_id)
         >= MINIMUM_NUMBER_OF_RATINGS
     ):
 
-        Logger().info(msg="USO EL ALGORITMO")
+        Logger().info(
+            msg="Utilizo el algoritmo porque tengo más de N interacciones hechas"
+        )
 
         attractions_ids = recommendations.get_recommendations_for_user_in_city(
             db=db, user_id=data.user_id, city=data.city
@@ -598,11 +602,14 @@ def comment_attraction(data: schemas.AddComment, db=Depends(get_db)):
         db=db, attraction_id=data.attraction_id
     )
 
+    sentiment_metric = recommendations.get_sentiment_metric(data.comment)
+
     return crud.add_comment(
         db=db,
         user_id=data.user_id,
         attraction_id=data.attraction_id,
         comment=data.comment,
+        sentiment_metric=sentiment_metric,
     )
 
 
@@ -640,8 +647,14 @@ def update_comment(
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
+
+    sentiment_metric = recommendations.get_sentiment_metric(data.new_comment)
+
     return crud.update_comment(
-        db=db, comment_to_edit=comment, updated_comment=data.new_comment
+        db=db,
+        comment_to_edit=comment,
+        updated_comment=data.new_comment,
+        updated_sentiment_metric=sentiment_metric,
     )
 
 

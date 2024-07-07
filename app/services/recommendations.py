@@ -1,9 +1,12 @@
 import os
+import warnings
 from typing import List
 
 import boto3
+import nltk
 import pandas as pd
-from pysentimiento import create_analyzer
+from deep_translator import GoogleTranslator
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 
@@ -14,12 +17,17 @@ from app.services.logger import Logger
 
 from ..db import models
 
+# warnings.filterwarnings("ignore")
+
+
 # Cantidad de atracciones que se quieren recomendar
 N_RECOMMENDATIONS = 20
 
 # Valor para rellenar a los nulos
 # Un nulo sucede cuando un usuario no calificó una atracción
 FILLNA_VALUE = 0
+
+nltk.download("vader_lexicon")
 
 
 # Devuelve las posiciones de los n números más grandes dado un arreglo de números
@@ -29,19 +37,23 @@ def n_greatest_positions(numbers, n):
     return sorted_indices[:n]
 
 
-def get_sentiment(text):
-    analyzer = create_analyzer(task="sentiment", lang="es")
-    prediction = analyzer.predict(text).probas
+def get_sentiment_metric(text):
+    sia = SentimentIntensityAnalyzer()
+    translator = GoogleTranslator(source="auto", target="en")
+    text = translator.translate(text)
+
+    Logger().debug(msg=f"Done translating")
+    sentiment = sia.polarity_scores(text)
     positive, negative, neutral = (
-        prediction["POS"],
-        prediction["NEG"],
-        prediction["NEU"],
+        sentiment["pos"],
+        sentiment["neg"],
+        sentiment["neu"],
     )
 
     if positive > negative and positive > neutral:
         return positive
     elif negative > positive and negative > neutral:
-        return negative
+        return -negative
     else:
         return 0
 
@@ -60,6 +72,7 @@ def create_rating_score(rating: int):
 
 
 def get_merged_df(db: Session):
+    Logger().debug(msg=f"Start loading ratings")
     df_ratings = pd.DataFrame(
         db.query(
             models.Ratings.user_id, models.Ratings.attraction_id, models.Ratings.rating
@@ -67,46 +80,56 @@ def get_merged_df(db: Session):
         columns=["user_id", "attraction_id", "rating"],
     )
 
+    Logger().debug(msg=f"Start loading likes")
     df_likes = pd.DataFrame(
         db.query(models.Likes.user_id, models.Likes.attraction_id).all(),
         columns=["user_id", "attraction_id"],
     )
     df_likes["is_liked"] = 1
 
+    Logger().debug(msg=f"Start loading saved")
     df_saved = pd.DataFrame(
         db.query(models.Saved.user_id, models.Saved.attraction_id).all(),
         columns=["user_id", "attraction_id"],
     )
     df_saved["is_saved"] = 1
 
+    Logger().debug(msg=f"Start loading done")
     df_done = pd.DataFrame(
         db.query(models.Done.user_id, models.Done.attraction_id).all(),
         columns=["user_id", "attraction_id"],
     )
     df_done["is_done"] = 1
 
+    Logger().debug(msg=f"Start loading comments")
     df_comments = pd.DataFrame(
         (
             db.query(
                 models.Comments.user_id,
                 models.Comments.attraction_id,
                 models.Comments.comment,
+                models.Comments.sentiment_metric,
             ).all()
         ),
-        columns=["user_id", "attraction_id", "comment"],
+        columns=["user_id", "attraction_id", "comment", "sentiment_metric"],
     )
 
     db.close()
 
+    Logger().debug(msg=f"Agrupa los comentarios por usuario")
     df_comments = (
-        df_comments.groupby(["user_id", "attraction_id"])["comment"]
-        .agg(lambda x: " ".join(x))
-        .reset_index()
+        df_comments.groupby(["user_id", "attraction_id"]).agg(
+            {"sentiment_metric": "mean"}
+        )
+        # .reset_index()
     )
 
-    df_comments["sentiment"] = df_comments["comment"].apply(get_sentiment)
+    print(df_comments.head(10))
 
-    Logger().info(msg=f"Start merging dfs")
+    # Logger().debug(msg=f"Start sentiment analysis")
+    # df_comments["sentiment"] = df_comments["comment"].apply(get_sentiment)
+
+    Logger().debug(msg=f"Start merging dfs")
 
     df = (
         pd.merge(df_ratings, df_likes, on=["user_id", "attraction_id"], how="outer")
@@ -122,7 +145,7 @@ def get_merged_df(db: Session):
         + 0.5 * df["is_saved"]
         + 0.1 * df["is_done"]
         + df["rating"].apply(create_rating_score)
-        + df["sentiment"]
+        + df["sentiment_metric"]
     )
     return df
 
@@ -230,6 +253,7 @@ def get_recommendations_for_user_in_city(db: Session, user_id: int, city: str):
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
 
+    Logger().debug(msg=f"Start computing cosine similarity")
     user_similarity = cosine_similarity([matrix.loc[user_id]], matrix)
 
     # Se obtienen las posiciones de los usuarios más cercanos

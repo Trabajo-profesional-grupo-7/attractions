@@ -333,6 +333,15 @@ def number_of_interactions_of_user(db: Session, user_id: int):
         )
         .count()
     )
+    print(
+        (
+            number_of_ratings_done
+            + number_of_attractions_liked
+            + number_of_attractions_saved
+            + number_of_attractions_done
+            + number_of_comments_made
+        )
+    )
     return (
         number_of_ratings_done
         + number_of_attractions_liked
@@ -345,9 +354,14 @@ def number_of_interactions_of_user(db: Session, user_id: int):
 # COMMENT
 
 
-def add_comment(db: Session, user_id: int, attraction_id: str, comment: str):
+def add_comment(
+    db: Session, user_id: int, attraction_id: str, comment: str, sentiment_metric: float
+):
     new_record = models.Comments(
-        user_id=user_id, attraction_id=attraction_id, comment=comment
+        user_id=user_id,
+        attraction_id=attraction_id,
+        comment=comment,
+        sentiment_metric=sentiment_metric,
     )
     db.add(new_record)
     db.commit()
@@ -366,8 +380,14 @@ def get_comment_by_id(db: Session, comment_id: int):
     )
 
 
-def update_comment(db: Session, comment_to_edit: models.Comments, updated_comment: str):
+def update_comment(
+    db: Session,
+    comment_to_edit: models.Comments,
+    updated_comment: str,
+    updated_sentiment_metric: float,
+):
     comment_to_edit.comment = updated_comment
+    comment_to_edit.sentiment_metric = updated_sentiment_metric
 
     db.commit()
     db.refresh(comment_to_edit)
