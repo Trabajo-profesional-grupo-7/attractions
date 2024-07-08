@@ -40,14 +40,8 @@ def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attra
         photo=attraction_db.photo,
         liked_count=attraction_db.likes_count,
         types=json.loads(attraction_db.types),
+        avg_rating=attraction_db.external_rating,
     )
-
-    if attraction_db.rating_count > 0:
-        attraction_schema.avg_rating = (
-            attraction_db.rating_total / attraction_db.rating_count
-        )
-    else:
-        attraction_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
         attraction_schema.editorial_summary = attraction_db.editorialSummary
@@ -74,14 +68,8 @@ def map_to_attraction_schema_with_comments(
         photo=attraction_db.photo,
         liked_count=attraction_db.likes_count,
         types=json.loads(attraction_db.types),
+        avg_rating=attraction_db.external_rating,
     )
-
-    if attraction_db.rating_count > 0:
-        attraction_schema.avg_rating = (
-            attraction_db.rating_total / attraction_db.rating_count
-        )
-    else:
-        attraction_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
         attraction_schema.editorial_summary = attraction_db.editorialSummary
@@ -124,14 +112,8 @@ def map_to_scheduled_attraction_schema(
         liked_count=attraction_db.likes_count,
         types=json.loads(attraction_db.types),
         scheduled_day=scheduled_day,
+        avg_rating=attraction_db.external_rating,
     )
-
-    if attraction_db.rating_count > 0:
-        attraction_schema.avg_rating = (
-            attraction_db.rating_total / attraction_db.rating_count
-        )
-    else:
-        attraction_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
         attraction_schema.editorial_summary = attraction_db.editorialSummary
@@ -160,6 +142,7 @@ def map_to_attraction_with_comments_by_user_schema(
         photo=attraction_db.photo,
         liked_count=attraction_db.likes_count,
         types=json.loads(attraction_db.types),
+        avg_rating=attraction_db.external_rating,
     )
 
     comments = crud.get_attraction_comments(
@@ -192,13 +175,6 @@ def map_to_attraction_with_comments_by_user_schema(
     attraction_by_user_schema.user_rating = crud.get_user_rating(
         db=db, attraction_id=attraction_id, user_id=user_id
     )
-
-    if attraction_db.rating_count > 0:
-        attraction_by_user_schema.avg_rating = (
-            attraction_db.rating_total / attraction_db.rating_count
-        )
-    else:
-        attraction_by_user_schema.avg_rating = attraction_db.external_rating
 
     if attraction_db.editorialSummary:
         attraction_by_user_schema.editorial_summary = attraction_db.editorialSummary
