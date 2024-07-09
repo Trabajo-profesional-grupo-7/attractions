@@ -41,15 +41,14 @@ def get_sentiment_metric(text):
 
     Logger().debug(msg=f"Done translating")
     sentiment = sia.polarity_scores(text)
-    positive, negative, neutral = (
+    positive, negative = (
         sentiment["pos"],
         sentiment["neg"],
-        sentiment["neu"],
     )
 
-    if positive > negative and positive > neutral:
+    if positive > negative:
         return positive
-    elif negative > positive and negative > neutral:
+    elif positive < negative:
         return -negative
     else:
         return 0
