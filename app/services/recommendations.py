@@ -1,9 +1,9 @@
 import os
-import warnings
 from typing import List
 
 import boto3
 import nltk
+import numpy as np
 import pandas as pd
 from deep_translator import GoogleTranslator
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -12,17 +12,14 @@ from sqlalchemy.orm import Session
 
 from app.db import crud
 from app.db.database import get_db_session
-from app.services.constants import MINIMUM_NUMBER_OF_RATINGS
+from app.services.constants import (
+    FILLNA_VALUE,
+    MINIMUM_NUMBER_OF_RATINGS,
+    N_RECOMMENDATIONS,
+)
 from app.services.logger import Logger
 
 from ..db import models
-
-# Cantidad de atracciones que se quieren recomendar
-N_RECOMMENDATIONS = 20
-
-# Valor para rellenar a los nulos
-# Un nulo sucede cuando un usuario no calificó una atracción
-FILLNA_VALUE = 0
 
 nltk.download("vader_lexicon")
 
@@ -65,6 +62,8 @@ def create_rating_score(rating: int):
         return 0.5
     elif rating == 5:
         return 1
+    else:
+        return 0
 
 
 def get_merged_df(db: Session):
@@ -129,11 +128,11 @@ def get_merged_df(db: Session):
     df.fillna(0, inplace=True)
 
     df["score"] = (
-        0.5 * df["is_liked"]
-        + 0.5 * df["is_saved"]
-        + 0.1 * df["is_done"]
-        + df["rating"].apply(create_rating_score)
-        + df["sentiment_metric"]
+        100 * df["is_liked"]
+        + 50 * df["is_saved"]
+        + 20 * df["is_done"]
+        + df["rating"].apply(create_rating_score) * 200
+        + df["sentiment_metric"] * 50
     )
     return df
 
@@ -149,7 +148,11 @@ def run_recommendation_system(db: Session):
 
     Logger().info(msg=f"Start calculating the cosine similarity matrix")
 
+    # Se calcula la similitud coseno de todos los usuarios con todos
     user_similarity = cosine_similarity(matrix)
+    user_similarity_df = pd.DataFrame(
+        user_similarity, index=matrix.index, columns=matrix.index
+    )
 
     db = get_db_session()
 
@@ -163,7 +166,7 @@ def run_recommendation_system(db: Session):
     table_name = "recommendations"
     table = dynamodb.Table(table_name)
 
-    for i, user_id in enumerate(matrix.index):
+    for user_id in matrix.index:
         Logger().info(msg=f"Processing user {user_id}")
 
         if (
@@ -171,19 +174,34 @@ def run_recommendation_system(db: Session):
             >= MINIMUM_NUMBER_OF_RATINGS
         ):
 
-            # Se obtienen las posiciones de los usuarios más cercanos
-            # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
-            positions = n_greatest_positions(user_similarity[i], N_RECOMMENDATIONS + 1)
+            # Se obtienen los ratings hechos por el usuario actual
+            user_ratings = matrix.loc[user_id]
 
-            # se filtra a la matriz dejando solamente a los usuarios cercanos
-            filtered_matrix = matrix.iloc[positions]
-            if user_id in filtered_matrix.index:
-                filtered_matrix = filtered_matrix.drop(user_id, axis=0)
+            # Se buscan usuarios similares utilizando a los que tengan mayor similitud coseno
+            similar_users = user_similarity_df[user_id].sort_values(ascending=False)
 
+            # Se genera un vector de ceros donde se almacenarán los scores predichos
+            scores = np.zeros(matrix.shape[1])
+
+            # Se recorren todos los usuarios eliminando el primero por ser el propio usuario con similitud=1
+            for similar_user in similar_users.index[1:]:
+                similarity_score = user_similarity_df[user_id][similar_user]
+                similar_user_ratings = matrix.loc[similar_user]
+                scores += similarity_score * similar_user_ratings
+
+            scores = pd.Series(scores, index=matrix.columns)
+
+            # Se eliminan las atracciones con las cuales el usuario ya interactuó
+            scores = scores[user_ratings == 0]
+
+            # Se toman las N_RECOMMENDATIONS con mayor score
             recommendations = (
-                filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
+                scores.sort_values(ascending=False)
+                .head(N_RECOMMENDATIONS)
+                .index.tolist()
             )
 
+            # Se actualiza el registro en DynamoDB
             item_data = {
                 "user_id": user_id,
                 "attraction_ids": recommendations,

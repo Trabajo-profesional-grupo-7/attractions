@@ -1,4 +1,11 @@
-MINIMUM_NUMBER_OF_RATINGS = 10
+# Cantidad de interacciones mínimas para usar el algoritmo
+MINIMUM_NUMBER_OF_RATINGS = 5
+
+# Cantidad de atracciones que se quieren recomendar
+N_RECOMMENDATIONS = 20
+
+# Valor para rellenar a los nulos en el algortimo de recomendación
+FILLNA_VALUE = 0
 
 ATTRACTION_TYPES = [
     "airport",
