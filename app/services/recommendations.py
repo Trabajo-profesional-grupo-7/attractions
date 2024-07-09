@@ -180,34 +180,36 @@ def run_recommendation_system(db: Session):
             # Se buscan usuarios similares utilizando a los que tengan mayor similitud coseno
             similar_users = user_similarity_df[user_id].sort_values(ascending=False)
 
-            # Se genera un vector de ceros donde se almacenarán los scores predichos
-            scores = np.zeros(matrix.shape[1])
+            if similar_users[similar_users != 0].count() > 1:
 
-            # Se recorren todos los usuarios eliminando el primero por ser el propio usuario con similitud=1
-            for similar_user in similar_users.index[1:]:
-                similarity_score = user_similarity_df[user_id][similar_user]
-                similar_user_ratings = matrix.loc[similar_user]
-                scores += similarity_score * similar_user_ratings
+                # Se genera un vector de ceros donde se almacenarán los scores predichos
+                scores = np.zeros(matrix.shape[1])
 
-            scores = pd.Series(scores, index=matrix.columns)
+                # Se recorren todos los usuarios eliminando el primero por ser el propio usuario con similitud=1
+                for similar_user in similar_users.index[1:]:
+                    similarity_score = user_similarity_df[user_id][similar_user]
+                    similar_user_ratings = matrix.loc[similar_user]
+                    scores += similarity_score * similar_user_ratings
 
-            # Se eliminan las atracciones con las cuales el usuario ya interactuó
-            scores = scores[user_ratings == 0]
+                scores = pd.Series(scores, index=matrix.columns)
 
-            # Se toman las N_RECOMMENDATIONS con mayor score
-            recommendations = (
-                scores.sort_values(ascending=False)
-                .head(N_RECOMMENDATIONS)
-                .index.tolist()
-            )
+                # Se eliminan las atracciones con las cuales el usuario ya interactuó
+                scores = scores[user_ratings == 0]
 
-            # Se actualiza el registro en DynamoDB
-            item_data = {
-                "user_id": user_id,
-                "attraction_ids": recommendations,
-            }
+                # Se toman las N_RECOMMENDATIONS con mayor score
+                recommendations = (
+                    scores.sort_values(ascending=False)
+                    .head(N_RECOMMENDATIONS)
+                    .index.tolist()
+                )
 
-            table.put_item(Item=item_data)
+                # Se actualiza el registro en DynamoDB
+                item_data = {
+                    "user_id": user_id,
+                    "attraction_ids": recommendations,
+                }
+
+                table.put_item(Item=item_data)
 
 
 def update_recommendations(user_id: int, attractions_ids: List[str]):

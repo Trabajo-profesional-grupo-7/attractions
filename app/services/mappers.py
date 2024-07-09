@@ -9,23 +9,7 @@ from sqlalchemy.orm import Session
 from app.db import crud, models
 from app.routes import schemas
 from app.services.constants import ATTRACTION_TYPES
-
-
-def get_user_name_and_avatar(user_id: int):
-    url = f"{os.getenv('USERS_URL')}/{user_id}"
-
-    response = requests.get(url)
-
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "status": "error",
-                "message": f"External API error: {response.status_code}",
-            },
-        )
-    response = json.loads(response.content)
-    return response["username"], response["avatar_link"]
+from app.services.users_service import get_user_name_and_avatar
 
 
 def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attraction:
