@@ -68,6 +68,7 @@ class Comment(BaseModel):
     user_id: int
     comment: str
     user_name: str
+    avatar_link: Optional[str] = None
 
 
 class Location(BaseModel):

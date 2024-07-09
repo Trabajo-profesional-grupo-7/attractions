@@ -11,7 +11,7 @@ from app.routes import schemas
 from app.services.constants import ATTRACTION_TYPES
 
 
-def get_user_name(user_id: int):
+def get_user_name_and_avatar(user_id: int):
     url = f"{os.getenv('USERS_URL')}/{user_id}"
 
     response = requests.get(url)
@@ -24,7 +24,8 @@ def get_user_name(user_id: int):
                 "message": f"External API error: {response.status_code}",
             },
         )
-    return json.loads(response.content)["username"]
+    response = json.loads(response.content)
+    return response["username"], response["avatar_link"]
 
 
 def map_to_attraction_schema(attraction_db: models.Attractions) -> schemas.Attraction:
@@ -83,13 +84,14 @@ def map_to_attraction_schema_with_comments(
     )
     if comments:
         for comment in comments:
-            user_name = get_user_name(user_id=comment.user_id)
+            user_name, avatar_link = get_user_name_and_avatar(user_id=comment.user_id)
             attraction_schema.comments.append(
                 schemas.Comment(
                     comment_id=comment.comment_id,
                     user_id=comment.user_id,
                     comment=comment.comment,
                     user_name=user_name,
+                    avatar_link=avatar_link,
                 )
             )
 
@@ -150,13 +152,14 @@ def map_to_attraction_with_comments_by_user_schema(
     )
     if comments:
         for comment in comments:
-            user_name = get_user_name(user_id=comment.user_id)
+            user_name, avatar_link = get_user_name_and_avatar(user_id=comment.user_id)
             attraction_by_user_schema.comments.append(
                 schemas.Comment(
                     comment_id=comment.comment_id,
                     user_id=comment.user_id,
                     comment=comment.comment,
                     user_name=user_name,
+                    avatar_link=avatar_link,
                 )
             )
 
