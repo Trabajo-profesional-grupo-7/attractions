@@ -14,7 +14,7 @@ from app.db import crud
 from app.db.database import get_db_session
 from app.services.constants import (
     FILLNA_VALUE,
-    MINIMUM_NUMBER_OF_RATINGS,
+    MINIMUM_NUMBER_OF_INTERACTIONS,
     N_RECOMMENDATIONS,
 )
 from app.services.logger import Logger
@@ -171,7 +171,7 @@ def run_recommendation_system(db: Session):
 
         if (
             crud.number_of_interactions_of_user(db=db, user_id=user_id)
-            >= MINIMUM_NUMBER_OF_RATINGS
+            >= MINIMUM_NUMBER_OF_INTERACTIONS
         ):
 
             # Se obtienen los ratings hechos por el usuario actual

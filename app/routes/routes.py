@@ -11,7 +11,7 @@ from app.db import crud, models
 from app.db.database import get_db
 from app.routes import schemas
 from app.services import attractions_service, mappers, recommendations
-from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_RATINGS
+from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_INTERACTIONS
 from app.services.logger import Logger
 
 router = APIRouter()
@@ -242,7 +242,7 @@ def run_recommendation_system(db=Depends(get_db)):
 def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(get_db)):
     if (
         crud.number_of_interactions_of_user(db=db, user_id=request.user_id)
-        < MINIMUM_NUMBER_OF_RATINGS
+        < MINIMUM_NUMBER_OF_INTERACTIONS
     ):
         attractions = []
 
@@ -294,7 +294,7 @@ def create_plan(
 
     if (
         crud.number_of_interactions_of_user(db=db, user_id=data.user_id, city=data.city)
-        >= MINIMUM_NUMBER_OF_RATINGS
+        >= MINIMUM_NUMBER_OF_INTERACTIONS
     ):
 
         Logger().info(
