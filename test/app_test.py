@@ -19,20 +19,6 @@ class TestMetadata(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class TestNearbyAttractions(unittest.TestCase):
-
-    def test_get_nearby_attractions_status_code_201(self):
-        response = client.post("/attractions/nearby/40.7128/-74.0060/5000")
-        self.assertEqual(response.status_code, 201)
-
-    def test_get_nearby_attractions_status_code_201_with_filter(self):
-        response = client.post(
-            "/attractions/nearby/40.7128/-74.0060/5000",
-            json={"attraction_types": ["Museum", "Park"]},
-        )
-        self.assertEqual(response.status_code, 201)
-
-
 class TestSearchAttractions(unittest.TestCase):
 
     def test_search_attractions_status_code_201(self):

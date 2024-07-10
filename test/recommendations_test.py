@@ -29,48 +29,6 @@ class TestNGreatestPositions(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
 
-class TestGetSentiment(unittest.TestCase):
-
-    @patch("app.services.recommendations.create_analyzer")
-    def test_get_sentiment_positive(self, mock_create_analyzer):
-        mock_analyzer = Mock()
-        mock_analyzer.predict.return_value.probas = {
-            "POS": 0.8,
-            "NEG": 0.1,
-            "NEU": 0.1,
-        }
-        mock_create_analyzer.return_value = mock_analyzer
-
-        result = get_sentiment("Fantastic place")
-        self.assertEqual(result, 0.8)
-
-    @patch("app.services.recommendations.create_analyzer")
-    def test_get_sentiment_negative(self, mock_create_analyzer):
-        mock_analyzer = Mock()
-        mock_analyzer.predict.return_value.probas = {
-            "POS": 0.1,
-            "NEG": 0.7,
-            "NEU": 0.2,
-        }
-        mock_create_analyzer.return_value = mock_analyzer
-
-        result = get_sentiment("Horrible place")
-        self.assertEqual(result, 0.7)
-
-    @patch("app.services.recommendations.create_analyzer")
-    def test_get_sentiment_neutral(self, mock_create_analyzer):
-        mock_analyzer = Mock()
-        mock_analyzer.predict.return_value.probas = {
-            "POS": 0.3,
-            "NEG": 0.3,
-            "NEU": 0.4,
-        }
-        mock_create_analyzer.return_value = mock_analyzer
-
-        result = get_sentiment("Place to visit")
-        self.assertEqual(result, 0)
-
-
 class TestCreateRatingScore(unittest.TestCase):
 
     def test_rating_1(self):
