@@ -65,7 +65,6 @@ def get_nearby_attractions(
     response = requests.post(url, json=data, headers=headers)
 
     if response.status_code != 200:
-        Logger().err(f"External API error: {response.content}")
         raise HTTPException(
             status_code=404,
             detail={

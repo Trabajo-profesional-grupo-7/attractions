@@ -11,7 +11,8 @@ from app.db import crud, models
 from app.db.database import get_db
 from app.routes import schemas
 from app.services import attractions_service, mappers, recommendations
-from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_INTERACTIONS
+from app.services.constants import (ATTRACTION_TYPES,
+                                    MINIMUM_NUMBER_OF_INTERACTIONS)
 from app.services.logger import Logger
 
 router = APIRouter()
@@ -290,16 +291,12 @@ def create_plan(
     db: Session = Depends(get_db),
 ):
 
-    Logger().info(msg="Inicia el endpoint")
-
     if (
         crud.number_of_interactions_of_user(db=db, user_id=data.user_id, city=data.city)
         >= MINIMUM_NUMBER_OF_INTERACTIONS
     ):
 
-        Logger().info(
-            msg="Utilizo el algoritmo porque tengo más de N interacciones hechas"
-        )
+        Logger().debug(msg="Uses algorithm to create the plan")
 
         attractions_ids = recommendations.get_recommendations_for_user_in_city(
             db=db, user_id=data.user_id, city=data.city
@@ -318,7 +315,7 @@ def create_plan(
 
         return formatted_response
 
-    Logger().info(msg="USO PREFERENCIAS")
+    Logger().debug(msg="Uses preferences to create the plan")
 
     attractions = []
 
@@ -366,7 +363,7 @@ def save_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
     if crud.get_saved_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
-        Logger().info("Attraction already saved by user")
+        Logger().err("Attraction already saved by user")
         raise HTTPException(
             status_code=404,
             detail={"status": "error", "message": "Attraction already saved by user"},
@@ -387,7 +384,7 @@ def unsave_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
     if not saved_attraction:
-        Logger().info("Attraction has not been saved by user")
+        Logger().err("Attraction has not been saved by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -440,7 +437,7 @@ def like_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
     if crud.get_liked_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
-        Logger().info("Attraction already liked by user")
+        Logger().err("Attraction already liked by user")
         raise HTTPException(
             status_code=404,
             detail={"status": "error", "message": "Attraction already liked by user"},
@@ -461,7 +458,7 @@ def unlike_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
     if not liked_attraction:
-        Logger().info("Attraction has not been liked by user")
+        Logger().err("Attraction has not been liked by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -489,7 +486,7 @@ def mark_as_done_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_d
     if crud.get_done_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
-        Logger().info("Attraction already marked as done by user")
+        Logger().err("Attraction already marked as done by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -513,7 +510,7 @@ def mark_as_undone_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
     if not done_attraction:
-        Logger().info("Attraction has not been marked as done by user")
+        Logger().err("Attraction has not been marked as done by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -560,7 +557,7 @@ def get_done_attractions_list(
 )
 def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
     if not 1 <= data.rating <= 5:
-        Logger().info("Rating must be between 1 and 5")
+        Logger().err("Rating must be between 1 and 5")
         raise HTTPException(
             status_code=400,
             detail={
@@ -623,7 +620,7 @@ def delete_comment(data: schemas.DeleteComment, db=Depends(get_db)):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
 
     if not comment:
-        Logger().info("Comment not found")
+        Logger().err("Comment not found")
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
@@ -643,7 +640,7 @@ def update_comment(
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
 
     if not comment:
-        Logger().info("Comment not found")
+        Logger().err("Comment not found")
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
@@ -669,7 +666,7 @@ def update_comment(
 )
 def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
     if data.datetime < datetime.datetime.now(datetime.timezone.utc):
-        Logger().info("Cannot schedule an attraction for a date before today")
+        Logger().err("Cannot schedule an attraction for a date before today")
         raise HTTPException(
             status_code=404,
             detail={
@@ -688,9 +685,7 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
         attraction_id=data.attraction_id,
         datetime=data.datetime,
     ):
-        Logger().info(
-            "Attraction has already been scheduled by user for specified date"
-        )
+        Logger().err("Attraction has already been scheduled by user for specified date")
         raise HTTPException(
             status_code=404,
             detail={
@@ -718,7 +713,7 @@ def unschedule_attraction(data: schemas.UnscheduleAttraction, db=Depends(get_db)
         db=db, schedule_id=data.schedule_id
     )
     if not scheduled_attraction:
-        Logger().info("Attraction has not been scheduled by user")
+        Logger().err("Attraction has not been scheduled by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -770,7 +765,7 @@ def update_schedule(
         db=db, schedule_id=data.schedule_id
     )
     if not scheduled_attraction:
-        Logger().info("Scheduled attraction not found")
+        Logger().err("Scheduled attraction not found")
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )

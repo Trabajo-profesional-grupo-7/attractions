@@ -36,7 +36,6 @@ def get_sentiment_metric(text):
     translator = GoogleTranslator(source="auto", target="en")
     text = translator.translate(text)
 
-    Logger().debug(msg=f"Done translating")
     sentiment = sia.polarity_scores(text)
     positive, negative = (
         sentiment["pos"],
@@ -111,7 +110,7 @@ def get_merged_df(db: Session):
 
     db.close()
 
-    Logger().debug(msg=f"Agrupa los comentarios por usuario")
+    Logger().debug(msg=f"Group comments by user and attraction")
     df_comments = df_comments.groupby(["user_id", "attraction_id"]).agg(
         {"sentiment_metric": "mean"}
     )
@@ -167,8 +166,6 @@ def run_recommendation_system(db: Session):
     table = dynamodb.Table(table_name)
 
     for user_id in matrix.index:
-        Logger().info(msg=f"Processing user {user_id}")
-
         if (
             crud.number_of_interactions_of_user(db=db, user_id=user_id)
             >= MINIMUM_NUMBER_OF_INTERACTIONS
@@ -256,23 +253,45 @@ def get_recommendations_for_user_in_city(db: Session, user_id: int, city: str):
     )
 
     # Matriz usuarios-atracciones
-    matrix = df.pivot(index="user_id", columns="attraction_id", values="rating")
+    matrix = df.pivot(index="user_id", columns="attraction_id", values="score")
 
     # Se rellenan los nulos
     matrix = matrix.fillna(FILLNA_VALUE)
 
     Logger().debug(msg=f"Start computing cosine similarity")
+
+    # Se calcula la similitud coseno del usuario con el resto de los usuarios
     user_similarity = cosine_similarity([matrix.loc[user_id]], matrix)
 
-    # Se obtienen las posiciones de los usuarios más cercanos
-    # Se agrega 1 al n porque se debe tener en cuenta que una siempre va a ser la propia atracción por tener similitud=1
-    positions = n_greatest_positions(user_similarity, N_RECOMMENDATIONS + 1)
+    user_similarity_df = pd.DataFrame(
+        {"user_id": matrix.index, "similarity_score": user_similarity[0]}
+    ).set_index("user_id")
 
-    # se filtra a la matriz dejando solamente a los usuarios cercanos
-    filtered_matrix = matrix.iloc[positions]
-    if user_id in filtered_matrix.index:
-        filtered_matrix = filtered_matrix.drop(user_id, axis=0)
+    # Se obtienen los ratings hechos por el usuario actual
+    user_ratings = matrix.loc[user_id]
 
-    recommendations = filtered_matrix.mean().nlargest(N_RECOMMENDATIONS).index.tolist()
+    # Se buscan usuarios similares utilizando a los que tengan mayor similitud coseno
+    similar_users = user_similarity_df.sort_values(
+        by="similarity_score", ascending=False
+    )
+
+    # Se genera un vector de ceros donde se almacenarán los scores predichos
+    scores = np.zeros(matrix.shape[1])
+
+    # Se recorren todos los usuarios eliminando el primero por ser el propio usuario con similitud=1
+    for similar_user in similar_users.index[1:]:
+        similarity_score = user_similarity_df.loc[similar_user]["similarity_score"]
+        similar_user_ratings = matrix.loc[similar_user]
+        scores += similarity_score * similar_user_ratings
+
+    scores = pd.Series(scores, index=matrix.columns)
+
+    # Se eliminan las atracciones con las cuales el usuario ya interactuó
+    scores = scores[user_ratings == 0]
+
+    # Se toman las N_RECOMMENDATIONS con mayor score
+    recommendations = (
+        scores.sort_values(ascending=False).head(N_RECOMMENDATIONS).index.tolist()
+    )
 
     return recommendations
