@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import CheckConstraint, Column, Date, DateTime, Integer, String
+from sqlalchemy import CheckConstraint, Column, DateTime, Float, Index, Integer, String
 
 from .database import Base
 
@@ -40,15 +40,7 @@ class Comments(Base):
     attraction_id = Column(String)
     comment = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-
-class Searches(Base):
-    __tablename__ = "searches"
-
-    search_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer)
-    query = Column(String)
-    searched_at = Column(DateTime, default=datetime.datetime.utcnow)
+    sentiment_metric = Column(Float)
 
 
 class Likes(Base):
@@ -63,12 +55,23 @@ class Attractions(Base):
     __tablename__ = "attractions"
 
     attraction_id = Column(String, primary_key=True)
+    attraction_name = Column(String)
+    country = Column(String)
+    city = Column(String, index=True)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    photo = Column(String)
     likes_count = Column(Integer, default=0)
     saved_count = Column(Integer, default=0)
     done_count = Column(Integer, default=0)
     rating_count = Column(Integer, default=0)
     rating_total = Column(Integer, default=0)
     scheduled_count = Column(Integer, default=0)
+    types = Column(String, default=[])
+    external_rating = Column(Float, default=None)
+    formattedAddress = Column(String, default=None)
+    googleMapsUri = Column(String, default=None)
+    editorialSummary = Column(String, default=None)
 
 
 class Scheduled(Base):
@@ -76,5 +79,5 @@ class Scheduled(Base):
     schedule_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer)
     attraction_id = Column(String)
-    day = Column(Date)
+    day = Column(DateTime)
     scheduled_at = Column(DateTime, default=datetime.datetime.utcnow)

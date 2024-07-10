@@ -7,7 +7,7 @@ services:
     container_name: attractions
     restart: always
     ports:
-      - ${PORT}:8003
+      - ${PORT}:${PORT}
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -16,3 +16,4 @@ services:
       - ATTRACTIONS_API_KEY=${ATTRACTIONS_API_KEY}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - USERS_URL=${USERS_URL}

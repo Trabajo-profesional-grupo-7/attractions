@@ -1,15 +1,53 @@
+import datetime
+import json
 import os
 from typing import List, Optional
 
-import boto3
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
+from requests import Session
 
-from app.db import crud, recommendations, schemas
+from app.db import crud, models
 from app.db.database import get_db
+from app.routes import schemas
+from app.services import attractions_service, mappers, recommendations
+from app.services.constants import ATTRACTION_TYPES, MINIMUM_NUMBER_OF_INTERACTIONS
 from app.services.logger import Logger
 
 router = APIRouter()
+
+
+# Checks if attraction exists in DB.
+# If it does, it returns it.
+# If it does not, it retrieves the data from external API,
+# adds it to DB and returns it.
+def get_attraction_by_id_and_add_it_if_not_cached(db: Session, attraction_id: str):
+    attraction_db = crud.get_attraction_by_id(db=db, attraction_id=attraction_id)
+
+    if not attraction_db:
+        attraction_db = crud.add_attraction(
+            db=db,
+            attraction_db=attractions_service.get_attraction_by_id(
+                attraction_id=attraction_id
+            ),
+        )
+
+    return attraction_db
+
+
+# Checks if attraction exists in DB.
+# If it does not, it adds it to DB.
+def get_attraction_and_add_it_if_not_cached(
+    db: Session, attraction: models.Attractions
+):
+    attraction_db = crud.get_attraction_by_id(
+        db=db, attraction_id=attraction.attraction_id
+    )
+
+    if not attraction_db:
+        attraction_db = crud.add_attraction(db=db, attraction_db=attraction)
+
+    return attraction_db
 
 
 # ATTRACTIONS
@@ -17,157 +55,52 @@ router = APIRouter()
 
 @router.get(
     "/metadata",
-    status_code=201,
+    status_code=200,
     tags=["Metadata"],
     description="Gets the application metadata",
 )
 def get_metadata():
-    return {
-        "attraction_types": [
-            "accounting",
-            "airport",
-            "amusement_park",
-            "aquarium",
-            "art_gallery",
-            "atm",
-            "bakery",
-            "bank",
-            "bar",
-            "beauty_salon",
-            "bicycle_store",
-            "book_store",
-            "bowling_alley",
-            "bus_station",
-            "cafe",
-            "campground",
-            "car_dealer",
-            "car_rental",
-            "car_repair",
-            "car_wash",
-            "casino",
-            "cemetery",
-            "church",
-            "city_hall",
-            "clothing_store",
-            "convenience_store",
-            "courthouse",
-            "dentist",
-            "department_store",
-            "doctor",
-            "drugstore",
-            "electrician",
-            "electronics_store",
-            "embassy",
-            "fire_station",
-            "florist",
-            "funeral_home",
-            "furniture_store",
-            "gas_station",
-            "gym",
-            "hair_care",
-            "hardware_store",
-            "hindu_temple",
-            "home_goods_store",
-            "hospital",
-            "insurance_agency",
-            "jewelry_store",
-            "laundr",
-            "lawyer",
-            "library",
-            "light_rail_station",
-            "liquor_store",
-            "local_government_office",
-            "locksmith",
-            "lodging",
-            "meal_delivery",
-            "meal_takeaway",
-            "mosque",
-            "movie_rental",
-            "movie_theater",
-            "moving_company",
-            "museum",
-            "night_club",
-            "painter",
-            "park",
-            "parking",
-            "pet_store",
-            "pharmacy",
-            "physiotherapist",
-            "plumber",
-            "police",
-            "post_office",
-            "primary_school",
-            "real_estate_agency",
-            "restaurant",
-            "roofing_contractor",
-            "rv_park",
-            "school",
-            "secondary_school",
-            "shoe_store",
-            "shopping_mall",
-            "spa",
-            "stadium",
-            "storage",
-            "store",
-            "subway_station",
-            "supermarket",
-            "synagogue",
-            "taxi_stand",
-            "tourist_attraction",
-            "train_station",
-            "transit_station",
-            "travel_agency",
-            "university",
-            "veterinary_care",
-            "zoo",
-        ]
-    }
+    return {"attraction_types": ATTRACTION_TYPES}
 
 
 @router.get(
     "/attractions/byid/{attraction_id}",
-    status_code=201,
+    status_code=200,
     tags=["Get Attractions"],
-    description="Gets an attraction given its ID",
+    description="Gets an attraction given its ID. Can optionally send user ID to get additional information.",
 )
 def get_attraction(
     attraction_id: str = Path(
         ..., title="Attraction ID", description="The ID of the attraction to get"
     ),
-    user_id: Optional[str] = None,
+    user_id: Optional[int] = None,
     db=Depends(get_db),
 ):
-    url = f"https://places.googleapis.com/v1/places/{attraction_id}"
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "displayName,id,addressComponents,photos",
-    }
+    attraction_db = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=attraction_id
+    )
 
-    response = requests.get(url, headers=headers)
-
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "status": "error",
-                "message": f"External API error: {response.status_code}",
-            },
+    if user_id != None:
+        return mappers.map_to_attraction_with_comments_by_user_schema(
+            db=db, attraction_db=attraction_db, user_id=user_id
         )
 
-    response = response.json()
-
-    return crud.format_attraction(db=db, attraction=response, user_id=user_id)
+    return mappers.map_to_attraction_schema_with_comments(
+        db=db, attraction_db=attraction_db
+    )
 
 
 @router.post(
     "/attractions/nearby/{latitude}/{longitude}/{radius}",
     status_code=201,
     tags=["Get Attractions"],
-    description="Gets nearby attractions given a latitude and longitude. Can filter by a list of attraction types.",
+    description="Gets nearby attractions given a latitude, longitude and radius. Can optionally filter by a list of attraction types.",
 )
 def get_nearby_attractions(
+    attractions_filter: Optional[
+        schemas.AttractionsFilter
+    ] = schemas.AttractionsFilter(),
     latitude: float = Path(
         ..., title="Latitude", description="Center latitude for search"
     ),
@@ -177,78 +110,77 @@ def get_nearby_attractions(
     radius: float = Path(
         ..., title="Radius", description="Search radius in meters", le=50000
     ),
-    attraction_types: List[str] = Query(
-        None,
-        title="Attraction Types",
-        description="Filter by attraction types",
-    ),
-    user_id: Optional[str] = None,
     db=Depends(get_db),
 ):
-    url = "https://places.googleapis.com/v1/places:searchNearby"
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos",
-    }
-
-    data = {
-        "includedTypes": attraction_types,
-        "maxResultCount": 10,
-        "locationRestriction": {
-            "circle": {
-                "center": {"latitude": latitude, "longitude": longitude},
-                "radius": radius,
-            }
-        },
-    }
-
-    response = requests.post(url, json=data, headers=headers)
-
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "status": "error",
-                "message": f"External API error: {response.status_code}",
-            },
-        )
+    attractions = attractions_service.get_nearby_attractions(
+        latitude=latitude,
+        longitude=longitude,
+        radius=radius,
+        attraction_types=attractions_filter.attraction_types,
+    )
 
     formatted_response = []
 
-    if "places" in response.json().keys():
-        for attraction in response.json()["places"]:
-            formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction, user_id=user_id)
-            )
+    for attraction_db in attractions:
 
-    return formatted_response
+        attraction_db = get_attraction_and_add_it_if_not_cached(
+            db=db, attraction=attraction_db
+        )
+
+        formatted_response.append(
+            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+        )
+
+    return attractions_service.sort_attractions_by_rating(formatted_response)
 
 
 @router.post(
     "/attractions/search",
     status_code=201,
     tags=["Get Attractions"],
-    description="Searches attractions given a text query. Can filter by a certain attraction type.",
+    description="Searches attractions given a text query. Can optionally filter by a certain attraction type.",
 )
 def search_attractions(
     data: schemas.SearchAttractionsByText,
     type: Optional[str] = None,
-    user_id: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
     db=Depends(get_db),
 ):
+    attractions = attractions_service.search_attractions(
+        query=data.query, type=type, latitude=latitude, longitude=longitude
+    )
+
+    formatted_response = []
+
+    for attraction_db in attractions:
+
+        attraction_db = get_attraction_and_add_it_if_not_cached(
+            db=db, attraction=attraction_db
+        )
+
+        formatted_response.append(
+            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+        )
+
+    return attractions_service.sort_attractions_by_rating(formatted_response)
+
+
+@router.get(
+    "/attractions/location",
+    status_code=200,
+    tags=["Get attractions location"],
+)
+def get_attraction_location(text: str):
     url = "https://places.googleapis.com/v1/places:searchText"
 
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-        "X-Goog-FieldMask": "places.displayName,places.id,places.addressComponents,places.photos",
+        "X-Goog-FieldMask": "places.location",
     }
 
-    response = requests.post(
-        url, json={"textQuery": data.query, "includedType": type}, headers=headers
-    )
+    response = requests.post(url, json={"textQuery": text}, headers=headers)
 
     if response.status_code != 200:
         raise HTTPException(
@@ -259,119 +191,158 @@ def search_attractions(
             },
         )
 
-    crud.add_search(db=db, user_id=data.user_id, query=data.query)
-
-    formatted_response = []
-
-    if "places" in response.json().keys():
-        for attraction in response.json()["places"]:
-            formatted_response.append(
-                crud.format_attraction(db=db, attraction=attraction, user_id=user_id)
-            )
-
-    return formatted_response
-
-
-@router.post(
-    "/attractions/autocomplete",
-    status_code=201,
-    tags=["Get Attractions"],
-    description="Returns attractions predictions given a substring. Can filter by a list of attraction types.",
-)
-def autocomplete_attractions(
-    data: schemas.AutocompleteAttractions,
-    attraction_types: List[str] = Query(
-        None,
-        title="Attraction Types",
-        description="Filter by attraction types",
-    ),
-    db=Depends(get_db),
-):
-    url = "https://places.googleapis.com/v1/places:autocomplete"
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": os.getenv("ATTRACTIONS_API_KEY"),
-    }
-
-    response = requests.post(
-        url,
-        json={"input": data.query, "includedPrimaryTypes": attraction_types},
-        headers=headers,
-    )
-
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "status": "error",
-                "message": f"External API error: {response.status_code}",
-            },
-        )
-
-    formatted_response = []
-
-    if "suggestions" in response.json().keys():
-        for attraction in response.json()["suggestions"]:
-            formatted_response.append(
-                {
-                    "attraction_id": attraction["placePrediction"]["placeId"],
-                    "attraction_name": attraction["placePrediction"]["text"]["text"],
-                }
-            )
-
-    return formatted_response
+    return response.json()
 
 
 @router.get(
-    "/attractions/recommendations/{attraction_id}",
-    status_code=201,
-    tags=["Get Attractions"],
-    description="Gets similar attractions given an attraction ID",
+    "/attractions/recommendations/{user_id}",
+    status_code=200,
+    tags=["Recommendations"],
+    description="Gets recommended attractions for a given user ID",
 )
-def get_attraction_recommendations(
-    attraction_id: str = Path(
-        ..., title="Attraction ID", description="The ID of the attraction"
-    ),
+def get_feed(
+    user_id: int = Path(..., title="User ID", description="The ID of the user"),
     page: int = Query(0, description="Page number", ge=0),
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
+    db=Depends(get_db),
 ):
 
-    session = boto3.Session(
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-    )
+    feed = attractions_service.get_feed(user_id=user_id, page=page, size=size)
 
-    dynamodb = session.resource("dynamodb", region_name="us-east-2")
+    formatted_response = []
 
-    table_name = "attractions"
-    table = dynamodb.Table(table_name)
-
-    key = {"attraction_id": attraction_id}
-    response = table.get_item(Key=key)
-    recommendations = response.get("Item")
-
-    if not recommendations:
-        Logger().info("No similar attractions were found")
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "status": "error",
-                "message": "No similar attractions were found",
-            },
+    for attraction_id in feed:
+        attraction_db = get_attraction_by_id_and_add_it_if_not_cached(
+            db=db, attraction_id=attraction_id
         )
 
-    return recommendations["similar_attractions"][page * size : (page + 1) * size]
+        formatted_response.append(
+            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+        )
+
+    return attractions_service.sort_attractions_by_rating(formatted_response)
 
 
 @router.post(
     "/attractions/run-recommendation-system",
     status_code=201,
-    tags=["Get Attractions"],
+    tags=["Recommendations"],
     description="Runs the recommendation system",
 )
 def run_recommendation_system(db=Depends(get_db)):
     recommendations.run_recommendation_system(db=db)
+
+
+@router.put(
+    "/update_recommendations/",
+    status_code=201,
+    tags=["Recommendations"],
+    description="Updates the recommendations for a certain user given preferences and default city",
+)
+def update_recommendations(request: schemas.UpdateRecommendations, db=Depends(get_db)):
+    if (
+        crud.number_of_interactions_of_user(db=db, user_id=request.user_id)
+        < MINIMUM_NUMBER_OF_INTERACTIONS
+    ):
+        attractions = []
+
+        for preference in request.preferences:
+            for attraction in attractions_service.search_attractions(
+                query=f"{preference} in {request.default_city}"
+            ):
+                attractions.append(attraction)
+
+        for attraction_db in attractions:
+            get_attraction_and_add_it_if_not_cached(db=db, attraction=attraction_db)
+
+        attractions = sorted(
+            attractions,
+            key=lambda x: (x.external_rating if x.external_rating is not None else 0),
+            reverse=True,
+        )
+
+        recommendations.update_recommendations(
+            user_id=request.user_id,
+            attractions_ids=[x.attraction_id for x in attractions],
+        )
+
+        response = Response(status_code=200)
+        response.headers["X-Message"] = (
+            f"Recommendations for user {request.user_id} updated successfully"
+        )
+        return response
+
+    response = Response(status_code=422)
+    response.headers["message"] = (
+        f"Recommendations were not updated because user {request.user_id} does not yet have a sufficient number of ratings made"
+    )
+    return response
+
+
+@router.post(
+    "/create_plan",
+    status_code=201,
+    tags=["Recommendations"],
+    description="Returns recommended attractions to visit a city for a certain user",
+)
+def create_plan(
+    data: schemas.CreatePlan,
+    db: Session = Depends(get_db),
+):
+
+    if (
+        crud.number_of_interactions_of_user(db=db, user_id=data.user_id, city=data.city)
+        >= MINIMUM_NUMBER_OF_INTERACTIONS
+    ):
+
+        Logger().debug(msg="Uses algorithm to create the plan")
+
+        attractions_ids = recommendations.get_recommendations_for_user_in_city(
+            db=db, user_id=data.user_id, city=data.city
+        )
+
+        formatted_response = []
+
+        for attraction_id in attractions_ids:
+            attraction_db = get_attraction_by_id_and_add_it_if_not_cached(
+                db=db, attraction_id=attraction_id
+            )
+
+            formatted_response.append(
+                mappers.map_to_attraction_schema(attraction_db=attraction_db)
+            )
+
+        return formatted_response
+
+    Logger().debug(msg="Uses preferences to create the plan")
+
+    attractions = []
+
+    for preference in data.preferences:
+        for attraction in attractions_service.search_attractions(
+            query=f"{preference} in {data.city}"
+        ):
+            attractions.append(attraction)
+
+    formatted_response = []
+
+    attractions_names = set()
+
+    for attraction_db in attractions:
+
+        attraction_db = get_attraction_and_add_it_if_not_cached(
+            db=db, attraction=attraction_db
+        )
+
+        if attraction_db.attraction_name not in attractions_names:
+
+            formatted_response.append(
+                mappers.map_to_attraction_schema(attraction_db=attraction_db)
+            )
+
+            attractions_names.add(attraction_db.attraction_name)
+
+    return attractions_service.sort_attractions_by_rating(formatted_response)
 
 
 # SAVE
@@ -384,10 +355,14 @@ def run_recommendation_system(db=Depends(get_db)):
     description="Saves an attraction for a user",
 )
 def save_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
+
     if crud.get_saved_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
-        Logger().info("Attraction already saved by user")
+        Logger().err("Attraction already saved by user")
         raise HTTPException(
             status_code=404,
             detail={"status": "error", "message": "Attraction already saved by user"},
@@ -408,7 +383,7 @@ def unsave_attraction(data: schemas.SaveAttraction, db=Depends(get_db)):
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
     if not saved_attraction:
-        Logger().info("Attraction has not been saved by user")
+        Logger().err("Attraction has not been saved by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -431,7 +406,17 @@ def get_saved_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    return crud.get_saved_attractions_list(db=db, user_id=user_id, page=page, size=size)
+    attractions = crud.get_user_saved_attractions(
+        db=db, user_id=user_id, page=page, size=size
+    )
+
+    formatted_response = []
+
+    for attraction_db in attractions:
+        formatted_response.append(
+            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+        )
+    return formatted_response
 
 
 # LIKE
@@ -444,10 +429,14 @@ def get_saved_attractions_list(
     description="Likes an attraction for a user",
 )
 def like_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
+
     if crud.get_liked_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
-        Logger().info("Attraction already liked by user")
+        Logger().err("Attraction already liked by user")
         raise HTTPException(
             status_code=404,
             detail={"status": "error", "message": "Attraction already liked by user"},
@@ -468,7 +457,7 @@ def unlike_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
     if not liked_attraction:
-        Logger().info("Attraction has not been liked by user")
+        Logger().err("Attraction has not been liked by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -477,21 +466,6 @@ def unlike_attraction(data: schemas.LikeAttraction, db=Depends(get_db)):
             },
         )
     crud.unlike_attraction(db=db, attraction_to_unlike=liked_attraction)
-
-
-@router.get(
-    "/attractions/like-list",
-    status_code=200,
-    tags=["Like Attraction"],
-    description="Returns a list of the attractions liked by an user",
-)
-def get_liked_attractions_list(
-    user_id: int = Query(..., description="User ID"),
-    page: int = Query(0, description="Page number", ge=0),
-    size: int = Query(10, description="Number of items per page", ge=1, le=100),
-    db=Depends(get_db),
-):
-    return crud.get_liked_attractions_list(db=db, user_id=user_id, page=page, size=size)
 
 
 # DONE
@@ -504,10 +478,14 @@ def get_liked_attractions_list(
     description="Marks as done a attraction for a user",
 )
 def mark_as_done_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get_db)):
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
+
     if crud.get_done_attraction(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     ):
-        Logger().info("Attraction already marked as done by user")
+        Logger().err("Attraction already marked as done by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -531,7 +509,7 @@ def mark_as_undone_attraction(data: schemas.MarkAsDoneAttraction, db=Depends(get
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
     )
     if not done_attraction:
-        Logger().info("Attraction has not been marked as done by user")
+        Logger().err("Attraction has not been marked as done by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -554,7 +532,17 @@ def get_done_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    return crud.get_done_attractions_list(db=db, user_id=user_id, page=page, size=size)
+    attractions = crud.get_user_done_attractions(
+        db=db, user_id=user_id, page=page, size=size
+    )
+
+    formatted_response = []
+
+    for attraction_db in attractions:
+        formatted_response.append(
+            mappers.map_to_attraction_schema(attraction_db=attraction_db)
+        )
+    return formatted_response
 
 
 # RATE
@@ -568,7 +556,7 @@ def get_done_attractions_list(
 )
 def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
     if not 1 <= data.rating <= 5:
-        Logger().info("Rating must be between 1 and 5")
+        Logger().err("Rating must be between 1 and 5")
         raise HTTPException(
             status_code=400,
             detail={
@@ -576,6 +564,10 @@ def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
                 "message": "Rating must be between 1 and 5",
             },
         )
+
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
 
     rating = crud.get_rating(
         db=db, user_id=data.user_id, attraction_id=data.attraction_id
@@ -602,11 +594,18 @@ def rate_attraction(data: schemas.AddRating, db=Depends(get_db)):
     description="Comments an attraction for an user",
 )
 def comment_attraction(data: schemas.AddComment, db=Depends(get_db)):
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
+
+    sentiment_metric = recommendations.get_sentiment_metric(data.comment)
+
     return crud.add_comment(
         db=db,
         user_id=data.user_id,
         attraction_id=data.attraction_id,
         comment=data.comment,
+        sentiment_metric=sentiment_metric,
     )
 
 
@@ -618,8 +617,9 @@ def comment_attraction(data: schemas.AddComment, db=Depends(get_db)):
 )
 def delete_comment(data: schemas.DeleteComment, db=Depends(get_db)):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
+
     if not comment:
-        Logger().info("Comment not found")
+        Logger().err("Comment not found")
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
@@ -637,13 +637,20 @@ def update_comment(
     db=Depends(get_db),
 ):
     comment = crud.get_comment_by_id(db, comment_id=data.comment_id)
+
     if not comment:
-        Logger().info("Comment not found")
+        Logger().err("Comment not found")
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
+
+    sentiment_metric = recommendations.get_sentiment_metric(data.new_comment)
+
     return crud.update_comment(
-        db=db, comment_to_edit=comment, updated_comment=data.new_comment
+        db=db,
+        comment_to_edit=comment,
+        updated_comment=data.new_comment,
+        updated_sentiment_metric=sentiment_metric,
     )
 
 
@@ -657,15 +664,27 @@ def update_comment(
     description="Schedules an attraction for a user at a certain timestamp",
 )
 def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
+    if data.datetime < datetime.datetime.now(datetime.timezone.utc):
+        Logger().err("Cannot schedule an attraction for a date before today")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Cannot schedule an attraction for a date before today",
+            },
+        )
+
+    _ = get_attraction_by_id_and_add_it_if_not_cached(
+        db=db, attraction_id=data.attraction_id
+    )
+
     if not crud.check_if_schedule_is_valid(
         db=db,
         user_id=data.user_id,
         attraction_id=data.attraction_id,
-        day=data.day,
+        datetime=data.datetime,
     ):
-        Logger().info(
-            "Attraction has already been scheduled by user for specified date"
-        )
+        Logger().err("Attraction has already been scheduled by user for specified date")
         raise HTTPException(
             status_code=404,
             detail={
@@ -678,7 +697,7 @@ def schedule_attraction(data: schemas.ScheduleAttraction, db=Depends(get_db)):
         db=db,
         user_id=data.user_id,
         attraction_id=data.attraction_id,
-        day=data.day,
+        datetime=data.datetime,
     )
 
 
@@ -693,7 +712,7 @@ def unschedule_attraction(data: schemas.UnscheduleAttraction, db=Depends(get_db)
         db=db, schedule_id=data.schedule_id
     )
     if not scheduled_attraction:
-        Logger().info("Attraction has not been scheduled by user")
+        Logger().err("Attraction has not been scheduled by user")
         raise HTTPException(
             status_code=404,
             detail={
@@ -716,9 +735,19 @@ def get_scheduled_attractions_list(
     size: int = Query(10, description="Number of items per page", ge=1, le=100),
     db=Depends(get_db),
 ):
-    return crud.get_scheduled_attractions_list(
+    attractions, days = crud.get_user_scheduled_list(
         db=db, user_id=user_id, page=page, size=size
     )
+
+    formatted_response = []
+
+    for i, attraction_db in enumerate(attractions):
+        formatted_response.append(
+            mappers.map_to_scheduled_attraction_schema(
+                attraction_db=attraction_db, scheduled_day=days[i]
+            )
+        )
+    return formatted_response
 
 
 @router.put(
@@ -735,12 +764,12 @@ def update_schedule(
         db=db, schedule_id=data.schedule_id
     )
     if not scheduled_attraction:
-        Logger().info("Scheduled attraction not found")
+        Logger().err("Scheduled attraction not found")
         raise HTTPException(
             status_code=404, detail={"status": "error", "message": "Comment not found"}
         )
     return crud.update_scheduled_attraction(
         db=db,
         scheduled_to_update=scheduled_attraction,
-        new_day=data.new_day,
+        new_datetime=data.new_datetime,
     )
